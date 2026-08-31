@@ -154,3 +154,4 @@ FRED is daily/weekly/monthly at source. For desks that move minute-to-minute, ad
 ### Stays seeded even in production (no free feed)
 
 SEP dot plot, Fed speaker leans/roster, dealer GEX/gamma, fund & factor flows, short interest, CDX/iTraxx, country PMIs, central-bank calendar, geopolitical/OSINT. These need paid vendors (Bloomberg / S&P / ICE / SpotGamma) or hand-maintenance — badge them clearly and update manually.
+
