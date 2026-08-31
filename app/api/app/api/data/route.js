@@ -28,10 +28,7 @@ async function resolve(mapObj) {
 
 export async function GET() {
   if (!process.env.FRED_API_KEY) {
-    return Response.json(
-      { ok: false, reason: "FRED_API_KEY not set", m: {}, board: {}, z: {}, meta: { live: [], errors: [] } },
-      { status: 200 }
-    );
+    return Response.json({ ok: false, reason: "FRED_API_KEY not set", m: {}, board: {}, z: {}, meta: { live: [], errors: [] } }, { status: 200 });
   }
   try {
     const zKeys = Object.keys(ZMAP);
@@ -42,26 +39,13 @@ export async function GET() {
     ]);
     const z = {};
     zRes.forEach((r, i) => {
-      if (r.status === "fulfilled" && r.value && r.value.z != null) {
-        z[zKeys[i]] = { z: r.value.z, value: r.value.value };
-      }
+      if (r.status === "fulfilled" && r.value && r.value.z != null) z[zKeys[i]] = { z: r.value.z, value: r.value.value };
     });
     return Response.json({
-      ok: true,
-      m: mRes.out,
-      board: bRes.out,
-      z,
-      meta: {
-        fetchedAt: new Date().toISOString(),
-        live: [...Object.keys(mRes.out), ...Object.keys(bRes.out)],
-        zlive: Object.keys(z),
-        errors: [...mRes.errors, ...bRes.errors],
-      },
+      ok: true, m: mRes.out, board: bRes.out, z,
+      meta: { fetchedAt: new Date().toISOString(), live: [...Object.keys(mRes.out), ...Object.keys(bRes.out)], zlive: Object.keys(z), errors: [...mRes.errors, ...bRes.errors] },
     });
   } catch (e) {
-    return Response.json(
-      { ok: false, reason: String(e), m: {}, board: {}, z: {}, meta: { live: [], errors: [] } },
-      { status: 200 }
-    );
+    return Response.json({ ok: false, reason: String(e), m: {}, board: {}, z: {}, meta: { live: [], errors: [] } }, { status: 200 });
   }
 }
