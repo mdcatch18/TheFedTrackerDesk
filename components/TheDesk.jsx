@@ -723,6 +723,8 @@ function Regime({m}){
   const fscored=useMemo(()=>FACTORS.map(r=>{const rateF=(m.funds-3.5)/.5,volF=(m.hyOAS-260)/100;const score=50+r[2]*.4+r[3].growth*g+r[3].infl*inf-r[3].rate*rateF*.5-r[3].vol*volF;return{s:r[0],etf:r[1],score};}).sort((a,b)=>b.score-a.score),[m,g,inf]);
   const fmx=Math.max(...fscored.map(s=>s.score)),fmn=Math.min(...fscored.map(s=>s.score));
   const px=50+g*46,py=50-inf*46;
+  const hiInf=inf>.15, qx=g>=0?100:0, qy=hiInf?0:100;
+  const activeQ=hiInf?(g>=0?"Overheating":"Stagflation"):(g>=0?"Goldilocks":"Recession");
   const trans=(()=>{const dg=(m.gdpnow<1.5?-1:1),di=(m.oil>84||m.corePCE>3.3?1:-1);
     return[["Goldilocks",clamp(30-inf*30+g*20,4,80)],["Overheating",clamp(30+inf*25+g*15,4,85)],["Stagflation",clamp(35+inf*30-g*20,4,88)],["Recession",clamp(30-g*30+(dg<0?12:0),4,82)]];})();
   const ALEN=ANALOGS[0].pts.length;
@@ -731,12 +733,18 @@ function Regime({m}){
     <Panel title="Regime Classifier" tag="growth × inflation" accent={rc}>
       <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:10}}><Chip label={name} tone={rc}/><span style={{font:`400 10px ${MONO}`,color:C.faint}}>g {fmt(g,2)} · infl {fmt(inf,2)}</span></div>
       <svg viewBox="0 0 200 200" style={{width:"100%",height:200}}>
-        <rect x="0" y="0" width="100" height="100" fill={C.amber} opacity=".05"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".05"/>
-        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".05"/><rect x="100" y="100" width="100" height="100" fill={C.teal} opacity=".05"/>
+        <defs>
+          <filter id="rglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="rgrad" cx="50%" cy="50%" r="70%"><stop offset="0%" stopColor={rc} stopOpacity=".38"/><stop offset="100%" stopColor={rc} stopOpacity=".08"/></radialGradient>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" fill={C.amber} opacity=".04"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".04"/>
+        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".04"/><rect x="100" y="100" width="100" height="100" fill={C.teal} opacity=".04"/>
+        <rect x={qx} y={qy} width="100" height="100" fill="url(#rgrad)"/>
+        <rect x={qx+2} y={qy+2} width="96" height="96" rx="3" fill="none" stroke={rc} strokeWidth="1.8" opacity=".95" filter="url(#rglow)"/>
         <line x1="100" y1="6" x2="100" y2="194" stroke={C.line}/><line x1="6" y1="100" x2="194" y2="100" stroke={C.line}/>
-        {[["Overheating",150,26],["Goldilocks",150,178],["Stagflation",50,26],["Recession",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
+        {[["Overheating",150,26],["Goldilocks",150,178],["Stagflation",50,26],["Recession",50,178]].map((q,i)=>{const on=q[0]===activeQ;return <text key={i} x={q[1]} y={q[2]} fill={on?rc:C.faint} fontSize={on?"8.5":"7.5"} fontWeight={on?"700":"400"} fontFamily={MONO} textAnchor="middle" filter={on?"url(#rglow)":undefined}>{q[0]}</text>;})}
         <text x="196" y="97" fill={C.dim} fontSize="7" fontFamily={MONO} textAnchor="end">growth →</text><text x="103" y="12" fill={C.dim} fontSize="7" fontFamily={MONO}>↑ inflation</text>
-        <circle cx={px*2} cy={py*2} r="7" fill={rc} opacity=".25"/><circle cx={px*2} cy={py*2} r="3.4" fill={rc}/>
+        <circle cx={px*2} cy={py*2} r="11" fill={rc} opacity=".2"/><circle cx={px*2} cy={py*2} r="4.6" fill={rc} filter="url(#rglow)"/><circle cx={px*2} cy={py*2} r="1.8" fill="#fff" opacity=".92"/>
       </svg>
     </Panel>
     <Panel title="Regime Transition Odds" tag="next-quarter" accent={C.violet} sub="heuristic">
