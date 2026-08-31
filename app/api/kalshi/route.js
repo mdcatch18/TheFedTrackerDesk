@@ -2,7 +2,7 @@
 // Live Kalshi macro prediction odds — public read API, NO auth / signing needed.
 // Batches a curated set of economic series, handles two market shapes:
 //   - "ladder": rate-level strikes (Above X%) -> differenced into 25bp band probabilities
-//   - "list":   plain binary contracts -> top contracts by volume, yes-price = implied prob
+//   - "list":   plain binary contracts -> top contracts by probability, yes-price = implied prob
 // Cached 5 min. Returns { asof, groups:[{key,label,items:[...]}] }.
 
 export const revalidate = 300; // 5 minutes
@@ -13,7 +13,6 @@ const API = "https://api.elections.kalshi.com/trade-api/v2";
 const CONFIG = [
   // --- Fed path ---
   { ticker: "KXFED",          group: "fed",       label: "Fed funds — next meeting",     kind: "ladder" },
-  { ticker: "KXFEDFUNDSYEAR", group: "fed",       label: "Fed funds — year end",         kind: "ladder" },
   { ticker: "KXRATECUTCOUNT", group: "fed",       label: "Rate cuts this year",          kind: "list", top: 4 },
   { ticker: "KXRATEHIKE",     group: "fed",       label: "Rate hikes this year",         kind: "list", top: 3 },
   // --- Inflation ---
@@ -131,7 +130,7 @@ export async function GET() {
         };
       }
 
-      // list: top contracts by 24h then total volume
+      // list: top contracts by implied probability
       const contracts = evMarkets
         .map((m) => ({
           name: m.yes_sub_title || m.subtitle || m.title,
@@ -139,9 +138,8 @@ export async function GET() {
           vol: parseFloat(m.volume_fp) || 0,
           vol24: parseFloat(m.volume_24h_fp) || 0,
         }))
-        .sort((a, b) => b.vol24 - a.vol24 || b.vol - a.vol || b.prob - a.prob)
-        .slice(0, cfg.top || 4)
-        .sort((a, b) => b.prob - a.prob);
+        .sort((a, b) => b.prob - a.prob || b.vol24 - a.vol24 || b.vol - a.vol)
+        .slice(0, cfg.top || 4);
 
       return {
         cfg,
