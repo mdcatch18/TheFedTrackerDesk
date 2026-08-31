@@ -731,10 +731,10 @@ function Regime({m}){
     <Panel title="Regime Classifier" tag="growth × inflation" accent={rc}>
       <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:10}}><Chip label={name} tone={rc}/><span style={{font:`400 10px ${MONO}`,color:C.faint}}>g {fmt(g,2)} · infl {fmt(inf,2)}</span></div>
       <svg viewBox="0 0 200 200" style={{width:"100%",height:200}}>
-        <rect x="0" y="0" width="100" height="100" fill={C.teal} opacity=".05"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".05"/>
-        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".05"/><rect x="100" y="100" width="100" height="100" fill={C.amber} opacity=".05"/>
+        <rect x="0" y="0" width="100" height="100" fill={C.amber} opacity=".05"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".05"/>
+        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".05"/><rect x="100" y="100" width="100" height="100" fill={C.teal} opacity=".05"/>
         <line x1="100" y1="6" x2="100" y2="194" stroke={C.line}/><line x1="6" y1="100" x2="194" y2="100" stroke={C.line}/>
-        {[["Goldilocks",150,26],["Overheating",150,178],["Recession",50,26],["Stagflation",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
+        {[["Overheating",150,26],["Goldilocks",150,178],["Stagflation",50,26],["Recession",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
         <text x="196" y="97" fill={C.dim} fontSize="7" fontFamily={MONO} textAnchor="end">growth →</text><text x="103" y="12" fill={C.dim} fontSize="7" fontFamily={MONO}>↑ inflation</text>
         <circle cx={px*2} cy={py*2} r="7" fill={rc} opacity=".25"/><circle cx={px*2} cy={py*2} r="3.4" fill={rc}/>
       </svg>
@@ -945,7 +945,7 @@ export default function TheDesk(){
   useEffect(()=>{let on=true;
     const load=()=>fetch("/api/data").then(r=>r.json()).then(d=>{if(!on)return;
       if(d&&d.ok){ if(d.m&&Object.keys(d.m).length)setM(p=>({...p,...d.m}));
-        setLive({board:d.board||{},meta:d.meta||{}}); setStatus("live"); }
+        setLive({board:d.board||{},meta:d.meta||{},z:d.z||{}}); setStatus("live"); }
       else setStatus("sample");
     }).catch(()=>{on&&setStatus("error");});
     load(); const id=setInterval(load,1800000); return()=>{on=false;clearInterval(id);};
@@ -961,6 +961,11 @@ export default function TheDesk(){
     const load=()=>fetch("/api/finnhub").then(r=>r.json()).then(d=>{if(on&&d&&d.quotes)setQuotes(d.quotes);}).catch(()=>{});
     load(); const id=setInterval(load,300000); return()=>{on=false;clearInterval(id);};
   },[]);
+  const [eia,setEia]=useState({});
+  useEffect(()=>{let on=true;
+    fetch("/api/eia").then(r=>r.json()).then(d=>{if(on&&d&&d.series)setEia(d.series);}).catch(()=>{});
+    return()=>{on=false;};
+  },[]);
   const net=m.fedBS-m.tga-m.rrp, chg13=net-(LIQ_SERIES[LIQ_SERIES.length-14]?.net??net);
   const g=.4*((m.ism-50)/6)+.4*((m.gdpnow-2)/2)-.2*((m.unemp-4)/1);
   const inf=.6*((m.corePCE-2)/2)+.4*((m.oil-70)/25);
@@ -973,8 +978,8 @@ export default function TheDesk(){
   else if(eng==="ERN")View=<Earnings/>;else if(eng==="SEC")View=<SectorsThemes bio={bio} quotes={quotes}/>;else if(eng==="POS")View=<Positioning/>;
   else if(eng==="INT")View=<Internals/>;else if(eng==="VAL")View=<Valuation/>;else if(eng==="TRG")View=<Triggers posture={posture} pc={pc}/>;
   else if(eng==="REG")View=<Regime m={m}/>;else if(eng==="GLB")View=<Global/>;else if(eng==="GEO")View=<Geo/>;else if(eng==="PRD")View=<Predict/>;
-  else if(eng==="RTS")View=<Rates m={m}/>;else if(eng==="CRD")View=<Credit m={m}/>;else if(eng==="CMD")View=<Commodities m={m}/>;else if(eng==="FXC")View=<FXDesk/>;else if(eng==="VOL")View=<Volatility/>;
-  else if(eng==="GMC")View=<GlobalMacro/>;else if(eng==="CAL")View=<Calendar/>;else if(eng==="XAS")View=<CrossAsset m={m}/>;else if(eng==="RSK")View=<MasterRisk m={m}/>;else View=<Cockpit m={m} posture={posture} pc={pc} go={setEng} quotes={quotes}/>;
+  else if(eng==="RTS")View=<Rates m={m}/>;else if(eng==="CRD")View=<Credit m={m}/>;else if(eng==="CMD")View=<Commodities m={m} eia={eia}/>;else if(eng==="FXC")View=<FXDesk/>;else if(eng==="VOL")View=<Volatility/>;
+  else if(eng==="GMC")View=<GlobalMacro/>;else if(eng==="CAL")View=<Calendar/>;else if(eng==="XAS")View=<CrossAsset m={m}/>;else if(eng==="RSK")View=<MasterRisk m={m}/>;else View=<Cockpit m={m} posture={posture} pc={pc} go={setEng} quotes={quotes} zdata={live?.z||{}}/>;
   return(
     <div style={{background:C.bg0,minHeight:"100vh",color:C.txt,fontFamily:SANS,padding:14}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:10}}>
@@ -1140,20 +1145,36 @@ function Credit({m}){
   </div>);
 }
 
-function Commodities({m}){
+function Commodities({m,eia={}}){
+  const E=eia||{}, hasE=Object.keys(E).length>0;
+  const eKey={"WTI crude":"wti","Brent":"brent","Nat gas (HH)":"henryhub"};
+  const eVal=(r)=>{ if(r[0]==="WTI–Brent"&&E.wti&&E.brent)return {v:fmt(E.wti.value-E.brent.value,1),live:true};
+    const k=eKey[r[0]]; if(k&&E[k])return {v:fmt(E[k].value,2),live:true}; return {v:r[1],live:false}; };
+  const INV=[["Crude oil","crude"],["Cushing hub","cushing"],["Gasoline","gasoline"],["Distillate","distillate"],["SPR","spr"]];
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={grid2}>
-    <Panel title="Energy Complex" tag="WTI · FRED live" accent={C.teal}>
-      {ENERGY.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<ENERGY.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+    <Panel title="Energy Complex" tag={hasE?"live · EIA + FRED":"WTI · FRED live"} accent={C.teal}>
+      {ENERGY.map((r,i)=>{const e=eVal(r);return(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 10px",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<ENERGY.length-1?`1px solid ${C.lineSoft}`:"none"}}>
         <span style={{font:`500 11px ${SANS}`,color:C.dim}}>{r[0]}</span>
-        <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r[1]}<span style={{color:C.faint,fontSize:9,marginLeft:3}}>{r[2]}</span></span></div>))}
+        <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{e.v}<span style={{color:C.faint,fontSize:9,marginLeft:3}}>{r[2]}</span></span>
+        <span style={{width:6,height:6,borderRadius:"50%",background:e.live?C.cyan:"transparent"}}/></div>);})}
     </Panel>
-    <Panel title="Inventories (EIA)" tag="sample · weekly Δ" accent={C.cyan}>
-      {EINV.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto 12px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<EINV.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+    <Panel title="Petroleum Status (EIA)" tag={hasE?`live · wk ${E.crude?.period||""}`:"sample · weekly Δ"} accent={C.cyan}>
+      {hasE?(<>
+        {INV.map((r,i)=>{const s=E[r[1]];if(!s)return null;const v=s.value/1000,chg=s.change!=null?s.change/1000:null,draw=chg!=null&&chg<0;return(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto 60px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.lineSoft}`}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
+            <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{fmt(v,1)}<span style={{color:C.faint,fontSize:9,marginLeft:2}}>Mbbl</span></span>
+            <span style={{font:`600 11px ${MONO}`,color:chg==null?C.faint:draw?C.teal:C.amber}}>{chg==null?"—":`${chg>=0?"+":""}${fmt(chg,1)}`}</span>
+            <Chip label={chg==null?"—":draw?"draw":"build"} tone={draw?C.teal:C.amber}/></div>);})}
+        {E.refutil&&<KV k="Refinery utilization" v={`${fmt(E.refutil.value,1)}%`} tone={C.txt} i={0} n={3}/>}
+        {E.production&&<KV k="Crude production" v={`${fmt(E.production.value/1000,1)} Mbbl/d`} tone={C.txt} i={1} n={3}/>}
+        {E.natgasstorage&&<KV k="Nat-gas storage" v={`${fmt(E.natgasstorage.value,0)} Bcf${E.natgasstorage.change!=null?`  (${E.natgasstorage.change>=0?"+":""}${fmt(E.natgasstorage.change,0)})`:""}`} tone={C.txt} i={2} n={3}/>}
+      </>):(EINV.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto 12px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<EINV.length-1?`1px solid ${C.lineSoft}`:"none"}}>
         <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
         <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r[1]}</span>
         <Chip label={r[3]} tone={r[3]==="draw"||r[3]==="tightening"?C.teal:C.amber}/>
-        <span style={{font:`600 9px ${MONO}`,color:ARR[r[2]][1]}}>{ARR[r[2]][0]}</span></div>))}
+        <span style={{font:`600 9px ${MONO}`,color:ARR[r[2]][1]}}>{ARR[r[2]][0]}</span></div>)))}
     </Panel>
    </div>
    <div style={grid2}>
@@ -1500,14 +1521,15 @@ function Tile({k,v,u,tone,hist,cur}){
 
 /* ═══════════════  COCKPIT ENGINE  ═══════════════ */
 const LIVE_TAPE=[["S&P 500","SPY"],["Nasdaq 100","QQQ"],["Russell 2000","IWM"],["Dow 30","DIA"],["Dev ex-US","EFA"],["Vol (VIXY)","VIXY"],["20y Treasury","TLT"],["IG Credit","LQD"],["HY Credit","HYG"],["Gold","GLD"],["Silver","SLV"],["Oil (USO)","USO"],["Commodities","DBC"],["US Dollar","UUP"],["Bitcoin","BITO"],["Ether","ETHA"]];
-function Cockpit({m,posture,pc,go,quotes={}}){
-  const qN=Object.keys(quotes).length;
+function Cockpit({m,posture,pc,go,quotes={},zdata={}}){
+  const qN=Object.keys(quotes).length, zN=Object.keys(zdata).length;
   const netliq=m.fedBS-m.tga-m.rrp, s2s10=(m.y10-m.y2)*100;
+  const vixLive=m.vix!=null?m.vix:17.8;
   const fci=+((m.real10-1.5)*0.6+(m.hyOAS-260)/100*0.8+(m.funds-3.5)*0.4-(m.gdpnow-2)*0.2).toFixed(2);
   const macro=clamp(50-(m.ism-50)*4-(m.gdpnow-2)*8+(m.unemp-4)*10,0,100);
   const rates=clamp(40+(m.real10-1.5)*18+(m.funds-3.5)*10-s2s10*0.3,0,100);
   const credit=clamp((m.hyOAS-250)/4+30,0,100);
-  const vol=clamp((17.8-12)*4+(MOVEIDX-90)*0.6,0,100);
+  const vol=clamp((vixLive-12)*4+(MOVEIDX-90)*0.6,0,100);
   const comps=[["Macro",macro,.18],["Rates",rates,.14],["Credit",credit,.16],["Volatility",vol,.12],["Positioning",58,.10],["Valuation",88,.12],["Breadth",62,.10],["Geopolitical",60,.08]];
   const composite=Math.round(comps.reduce((s,c)=>s+c[1]*c[2],0));
   const band=composite>62?["Elevated risk",C.red]:composite>45?["Cautious",C.amber]:["Constructive",C.teal];
@@ -1526,13 +1548,17 @@ function Cockpit({m,posture,pc,go,quotes={}}){
     ["HY OAS",`${fmt(m.hyOAS,0)}`,"bp",m.hyOAS>320?C.red:C.teal,H_HY,m.hyOAS,"CRD"],
     ["Core PCE",`${fmt(m.corePCE,1)}`,"%",m.corePCE>3?C.red:C.teal,H_PCE,m.corePCE,"MAC"],
     ["WTI Crude",`$${fmt(m.oil,0)}`,"",m.oil>85?C.red:C.txt,H_WTI,m.oil,"CMD"],
-    ["VIX","17.8","",C.dim,H_VIX,17.8,"VOL"],
+    ["VIX",m.vix!=null?fmt(m.vix,1):"17.8","",m.vix>25?C.red:C.dim,H_VIX,vixLive,"VOL"],
     ["Gold","2,680","",C.amber,H_GOLD,2680,"CMD"],
-    ["DXY","104.2","",C.cyan,H_DXY,104.2,"FXC"],
+    ["USD (broad)",m.dollar!=null?fmt(m.dollar,1):"104.2","",C.cyan,H_DXY,m.dollar??104.2,"FXC"],
     ["GDPNow",`${fmt(m.gdpnow,1)}`,"%",m.gdpnow<1.5?C.amber:C.teal,H_GDP,m.gdpnow,"MAC"],
     ["ISM Mfg",`${fmt(m.ism,1)}`,"",m.ism<50?C.red:C.teal,H_ISM,m.ism,"MAC"],
   ];
+  const MOVER_SET=[["S&P 500","SPY"],["Nasdaq 100","QQQ"],["Russell 2000","IWM"],["Gold","GLD"],["Silver","SLV"],["Oil","USO"],["Copper","COPX"],["Bitcoin","BITO"],["Ether","ETHA"],["US Dollar","UUP"],["20y Tsy","TLT"],["HY Credit","HYG"],["Vol","VIXY"],["Commodities","DBC"]];
+  const liveMovers=MOVER_SET.filter(x=>quotes[x[1]]&&typeof quotes[x[1]].dp==="number").map(x=>({name:x[0],sym:x[1],dp:quotes[x[1]].dp})).sort((a,b)=>Math.abs(b.dp)-Math.abs(a.dp)).slice(0,10);
+  const useMovers=liveMovers.length>=4;
   const movers=[...MOVERS].sort((a,b)=>Math.abs(b[3])-Math.abs(a[3]));
+  const liveAnoms=zN?Object.keys(zdata).map(k=>({name:k,z:zdata[k].z,val:zdata[k].value})).sort((a,b)=>Math.abs(b.z)-Math.abs(a.z)):null;
   const anoms=[...ANOM].sort((a,b)=>Math.abs(b[2])-Math.abs(a[2]));
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
     {qN>0&&(<Panel title="Live Tape" tag={`${qN} live · Finnhub · 5-min`} accent={C.cyan} sub="cross-asset ETF proxies · price + day change">
@@ -1568,24 +1594,36 @@ function Cockpit({m,posture,pc,go,quotes={}}){
     </Panel>
 
     <div style={grid2}>
-      <Panel title="Anomaly Monitor" tag="z-score vs own history" accent={C.red} sub="|z| ≥ 2σ flagged">
-        {anoms.map((r,i)=>{const ex=Math.abs(r[2])>=2,c=ex?(r[2]>0?C.red:C.blue):C.dim;return(
+      <Panel title="Anomaly Monitor" tag={zN?`${zN} live · FRED z`:"z-score vs own history"} accent={C.red} sub="|z| ≥ 2σ flagged">
+        {liveAnoms?liveAnoms.map((r,i)=>{const ex=Math.abs(r.z)>=2,c=ex?(r.z>0?C.red:C.blue):C.dim;return(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 58px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<liveAnoms.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+            <span style={{font:`500 11px ${SANS}`,color:ex?C.txt:C.dim}}>{r.name}{ex&&<span style={{font:`600 8px ${MONO}`,color:c,marginLeft:6}}>●</span>}</span>
+            <span style={{font:`600 11px ${MONO}`,color:C.dim}}>{fmt(r.val,2)}</span>
+            <span style={{font:`600 12px ${MONO}`,color:c,textAlign:"right"}}>{r.z>=0?"+":""}{fmt(r.z,1)}σ</span>
+          </div>);}):anoms.map((r,i)=>{const ex=Math.abs(r[2])>=2,c=ex?(r[2]>0?C.red:C.blue):C.dim;return(
           <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 58px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<anoms.length-1?`1px solid ${C.lineSoft}`:"none"}}>
             <span style={{font:`500 11px ${SANS}`,color:ex?C.txt:C.dim}}>{r[0]}{ex&&<span style={{font:`600 8px ${MONO}`,color:c,marginLeft:6}}>●</span>}</span>
             <span style={{font:`600 11px ${MONO}`,color:C.dim}}>{r[1]}</span>
             <span style={{font:`600 12px ${MONO}`,color:c,textAlign:"right"}}>{r[2]>=0?"+":""}{fmt(r[2],1)}σ</span>
           </div>);})}
-        <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Gold, CAPE and oil-vol are the stretched tails; the low copper/gold ratio is the growth-worry tell.</div>
+        <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>{liveAnoms?"Live z-scores vs each series' own trailing history — flagged names are 2σ+ stretched.":"Gold, CAPE and oil-vol are the stretched tails."}</div>
       </Panel>
-      <Panel title="Biggest Movers" tag="1-day · 1-week %" accent={C.amber} sub="sorted by weekly move">
-        <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
-          <span style={{font:`600 9px ${SANS}`,color:C.faint}}>asset</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>1d</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>1w</span>
-        </div>
-        {movers.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<movers.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-          <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}<span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:5}}>{r[1]}</span></span>
-          <span style={{font:`600 11px ${MONO}`,color:r[2]>=0?C.teal:C.red,textAlign:"right"}}>{r[2]>=0?"+":""}{fmt(r[2],1)}</span>
-          <span style={{font:`600 11px ${MONO}`,color:r[3]>=0?C.teal:C.red,textAlign:"right"}}>{r[3]>=0?"+":""}{fmt(r[3],1)}</span>
-        </div>))}
+      <Panel title="Biggest Movers" tag={useMovers?"live · day %":"1-day · 1-week %"} accent={C.amber} sub={useMovers?"cross-asset · sorted by move":"sorted by weekly move"}>
+        {useMovers?(<>
+          {liveMovers.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<liveMovers.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.name}<span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:5}}>{r.sym}</span></span>
+            <span style={{font:`600 12px ${MONO}`,color:r.dp>=0?C.teal:C.red,textAlign:"right"}}>{r.dp>=0?"▲":"▼"}{Math.abs(r.dp).toFixed(2)}%</span>
+          </div>))}
+        </>):(<>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
+            <span style={{font:`600 9px ${SANS}`,color:C.faint}}>asset</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>1d</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>1w</span>
+          </div>
+          {movers.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<movers.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}<span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:5}}>{r[1]}</span></span>
+            <span style={{font:`600 11px ${MONO}`,color:r[2]>=0?C.teal:C.red,textAlign:"right"}}>{r[2]>=0?"+":""}{fmt(r[2],1)}</span>
+            <span style={{font:`600 11px ${MONO}`,color:r[3]>=0?C.teal:C.red,textAlign:"right"}}>{r[3]>=0?"+":""}{fmt(r[3],1)}</span>
+          </div>))}
+        </>)}
       </Panel>
     </div>
 
