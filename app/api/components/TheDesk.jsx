@@ -886,25 +886,69 @@ function Geo(){
 }
 
 function Predict(){
-  const tone=g=>g==="Fed Path"?C.amber:g==="Market & Crash"?C.red:C.violet;
+  const [data,setData]=useState(null);
+  const [status,setStatus]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/kalshi").then(r=>r.json()).then(d=>{if(!on)return;
+      if(d&&Array.isArray(d.groups)){setData(d);setStatus("live");}else setStatus("error");
+    }).catch(()=>{on&&setStatus("error");});
+    return()=>{on=false;};
+  },[]);
+  const tone=k=>k==="fed"?C.amber:k==="growth"?C.red:C.violet;
+
+  const Ladder=({item,t})=>{
+    const act=item.buckets.filter(b=>b.prob>0);
+    const tot=act.reduce((s,b)=>s+b.prob,0)||1;
+    return(<div style={{padding:"7px 0",borderBottom:`1px solid ${C.lineSoft}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{item.label}</span>
+        <span style={{font:`400 9px ${MONO}`,color:C.faint}}>{item.meetingDate} · modal {item.modal.range}</span>
+      </div>
+      <div style={{display:"flex",height:20,borderRadius:4,overflow:"hidden",gap:1,background:C.bg2}}>
+        {act.map((b,i)=>{const mod=b.range===item.modal.range;return(
+          <div key={i} title={`${b.range} · ${b.prob}%`} style={{flex:`${b.prob/tot} 1 0`,background:t,opacity:mod?.92:.38,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {b.prob>=13&&<span style={{font:`600 9px ${MONO}`,color:C.bg0}}>{b.prob}</span>}
+          </div>);})}
+      </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:6}}>
+        {act.map((b,i)=>{const mod=b.range===item.modal.range;return(
+          <span key={i} style={{font:`500 9px ${MONO}`,color:mod?t:C.faint}}>{b.range} · {b.prob}%</span>);})}
+      </div>
+    </div>);
+  };
+
+  const ListItem=({item,t,last})=>(
+    <div style={{padding:"7px 0",borderBottom:last?"none":`1px solid ${C.lineSoft}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{item.label}</span>
+        {item.meetingDate&&<span style={{font:`400 9px ${MONO}`,color:C.faint}}>{item.meetingDate}</span>}
+      </div>
+      {item.contracts.map((c,i)=>(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 40px",gap:8,alignItems:"center",padding:"3px 0"}}>
+          <div>
+            <div style={{font:`500 10px ${SANS}`,color:C.dim,marginBottom:3}}>{c.name}</div>
+            <div style={{height:5,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${c.prob}%`,background:t,opacity:.82,borderRadius:3}}/></div>
+          </div>
+          <span style={{font:`600 13px ${MONO}`,color:t,textAlign:"right"}}>{c.prob}<span style={{fontSize:8,color:C.faint}}>%</span></span>
+        </div>))}
+    </div>
+  );
+
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
-   <div style={grid2}>
-    {Object.entries(PREDICT).map(([grp,rows])=>(
-      <Panel key={grp} title={grp} tag="sample · live via API" accent={tone(grp)} sub="implied probability">
-        {rows.map((r,i)=><ProbBar key={i} q={r[0]} prob={r[1]} chg={r[2]} src={r[3]} tone={tone(grp)}/>)}
-      </Panel>))}
-   </div>
-   <div style={grid2}>
-    <Panel title="Multi-Venue Arbitrage" tag="Kalshi vs Poly vs CME" accent={C.cyan} sub="cross-venue spread">
-      {VENUE.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto 40px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<VENUE.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[1]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[2]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[3]}</span>
-        <Chip label={r[4]} tone={r[4].startsWith("3")?C.amber:C.teal}/>
-      </div>))}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Wider cross-venue spreads = disagreement / potential edge; tight spreads = consensus-priced.</div>
-    </Panel>
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+      <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Prediction Markets</span>
+      <Chip label={status==="live"?"● LIVE · Kalshi":status==="loading"?"○ loading…":"● offline"} tone={status==="live"?C.teal:status==="error"?C.red:C.dim}/>
+      <span style={{font:`400 10px ${MONO}`,color:C.faint}}>implied probability · no-auth read API · 5-min cache</span>
+    </div>
+    {status!=="live"&&<Panel title="Prediction Markets" tag="Kalshi" accent={C.violet}><div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"6px 0"}}>{status==="loading"?"Loading live Kalshi odds…":"Couldn't reach /api/kalshi — check the route is deployed."}</div></Panel>}
+    {data&&(<div style={grid2}>
+      {data.groups.filter(g=>g.items&&g.items.length).map(g=>{const t=tone(g.key);return(
+        <Panel key={g.key} title={g.label} tag="live · Kalshi" accent={t} sub="implied probability">
+          {g.items.map((item,i)=>item.kind==="ladder"
+            ?<Ladder key={i} item={item} t={t}/>
+            :<ListItem key={i} item={item} t={t} last={i===g.items.length-1}/>)}
+        </Panel>);})}
+    </div>)}
     <Panel title="Calibration Track Record" tag="accuracy by class" accent={C.blue} sub="Brier · hit-rate">
       {CALIB.map((r,i)=>{const c=r[2]>85?C.teal:r[2]>72?C.amber:C.red;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"120px 54px 1fr 34px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<CALIB.length-1?`1px solid ${C.lineSoft}`:"none"}}>
@@ -915,7 +959,6 @@ function Predict(){
         </div>);})}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Fed-path markets are best-calibrated; geopolitical binaries the least — weight them accordingly.</div>
     </Panel>
-   </div>
   </div>);
 }
 
