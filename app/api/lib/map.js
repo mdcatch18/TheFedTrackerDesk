@@ -1,29 +1,26 @@
 // Maps the front-end model + macro-board rows to FRED series IDs.
-// method: last | yoy | mom | chg   (sc = scale applied after)
-
 export const M_MAP = {
-  fedBS:   { id: "WALCL",       m: "last", sc: 1e-6 },  // millions → $T
-  rrp:     { id: "RRPONTSYD",   m: "last", sc: 1e-3 },  // $B → $T
-  tga:     { id: "WTREGEN",     m: "last", sc: 1e-6 },  // millions → $T
-  reserves:{ id: "WRESBAL",     m: "last", sc: 1e-6 },  // millions → $T
+  fedBS:   { id: "WALCL",       m: "last", sc: 1e-6 },
+  rrp:     { id: "RRPONTSYD",   m: "last", sc: 1e-3 },
+  tga:     { id: "WTREGEN",     m: "last", sc: 1e-6 },
+  reserves:{ id: "WRESBAL",     m: "last", sc: 1e-6 },
   funds:   { id: "DFF",         m: "last" },
   y3m:     { id: "DGS3MO",      m: "last" },
   y2:      { id: "DGS2",        m: "last" },
   y10:     { id: "DGS10",       m: "last" },
   y30:     { id: "DGS30",       m: "last" },
   real10:  { id: "DFII10",      m: "last" },
-  hyOAS:   { id: "BAMLH0A0HYM2",m: "last", sc: 100 },   // % → bp
+  hyOAS:   { id: "BAMLH0A0HYM2",m: "last", sc: 100 },
   igOAS:   { id: "BAMLC0A0CM",  m: "last", sc: 100 },
   bbbOAS:  { id: "BAMLC0A4CBBB",m: "last", sc: 100 },
   corePCE: { id: "PCEPILFE",    m: "yoy" },
   unemp:   { id: "UNRATE",      m: "last" },
   gdpnow:  { id: "GDPNOW",      m: "last" },
   oil:     { id: "DCOILWTICO",  m: "last" },
-  vix:     { id: "VIXCLS",      m: "last" },   // real VIX (CBOE close)
-  dollar:  { id: "DTWEXBGS",    m: "last" },   // broad trade-weighted USD index
+  vix:     { id: "VIXCLS",      m: "last" },
+  dollar:  { id: "DTWEXBGS",    m: "last" },
 };
 
-// anomaly monitor: real z-scores vs each series' own history (FRED, free)
 export const ZMAP = {
   "VIX":            { id: "VIXCLS",       n: 500 },
   "Oil vol (OVX)":  { id: "OVXCLS",       n: 500 },
