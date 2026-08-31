@@ -1,7 +1,11 @@
-import { last, yoy, mom, chg } from "../../../lib/fred";
-import { M_MAP, BOARD_MAP } from "../../../lib/map";
+import { last, yoy, mom, chg, zscore } from "../../../lib/fred";
+import * as MAPS from "../../../lib/map";
 
-export const revalidate = 3300; // ~55min so an hourly cron always finds it expired
+export const revalidate = 3300;
+
+const M_MAP = MAPS.M_MAP || {};
+const BOARD_MAP = MAPS.BOARD_MAP || {};
+const ZMAP = MAPS.ZMAP || {};
 
 const call = (spec) => {
   const sc = spec.sc ?? 1;
@@ -12,7 +16,7 @@ const call = (spec) => {
 };
 
 async function resolve(mapObj) {
-  const keys = Object.keys(mapObj);
+  const keys = Object.keys(mapObj || {});
   const out = {}, errors = [];
   const results = await Promise.allSettled(keys.map((k) => call(mapObj[k])));
   results.forEach((r, i) => {
@@ -25,25 +29,38 @@ async function resolve(mapObj) {
 export async function GET() {
   if (!process.env.FRED_API_KEY) {
     return Response.json(
-      { ok: false, reason: "FRED_API_KEY not set", m: {}, board: {}, meta: { live: [], errors: [] } },
+      { ok: false, reason: "FRED_API_KEY not set", m: {}, board: {}, z: {}, meta: { live: [], errors: [] } },
       { status: 200 }
     );
   }
   try {
-    const [mRes, bRes] = await Promise.all([resolve(M_MAP), resolve(BOARD_MAP)]);
+    const zKeys = Object.keys(ZMAP);
+    const [mRes, bRes, zRes] = await Promise.all([
+      resolve(M_MAP),
+      resolve(BOARD_MAP),
+      Promise.allSettled(zKeys.map((k) => zscore(ZMAP[k].id, ZMAP[k].n))),
+    ]);
+    const z = {};
+    zRes.forEach((r, i) => {
+      if (r.status === "fulfilled" && r.value && r.value.z != null) {
+        z[zKeys[i]] = { z: r.value.z, value: r.value.value };
+      }
+    });
     return Response.json({
       ok: true,
       m: mRes.out,
       board: bRes.out,
+      z,
       meta: {
         fetchedAt: new Date().toISOString(),
         live: [...Object.keys(mRes.out), ...Object.keys(bRes.out)],
+        zlive: Object.keys(z),
         errors: [...mRes.errors, ...bRes.errors],
       },
     });
   } catch (e) {
     return Response.json(
-      { ok: false, reason: String(e), m: {}, board: {}, meta: { live: [], errors: [] } },
+      { ok: false, reason: String(e), m: {}, board: {}, z: {}, meta: { live: [], errors: [] } },
       { status: 200 }
     );
   }
