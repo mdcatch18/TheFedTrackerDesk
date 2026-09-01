@@ -1,5 +1,6 @@
 // app/api/vol/route.js
 // Cross-asset spot volatility via FRED. Uses existing FRED_API_KEY.
+// Each series independent — one failure won't kill the rest.
 export const revalidate = 3600;
 
 const KEY = process.env.FRED_API_KEY;
@@ -24,15 +25,15 @@ async function latest(id) {
 
 export async function GET() {
   if (!KEY) return Response.json({ ok:false, error:"FRED_API_KEY missing", rows:[] }, { status:200 });
-  try {
-    const rows = await Promise.all(
-      SERIES.map(async ([label, id]) => ({ label, v: await latest(id) }))
-    );
-    return Response.json(
-      { ok:true, asof:new Date().toISOString(), rows:rows.filter(r=>r.v!=null) },
-      { headers:{ "cache-control":"public, s-maxage=3600, stale-while-revalidate=7200" } }
-    );
-  } catch (e) {
-    return Response.json({ ok:false, error:String(e.message||e), rows:[] }, { status:200 });
-  }
+  const settled = await Promise.allSettled(SERIES.map(([, id]) => latest(id)));
+  const rows = [];
+  SERIES.forEach(([label], i) => {
+    if (settled[i].status === "fulfilled" && settled[i].value != null) {
+      rows.push({ label, v: settled[i].value });
+    }
+  });
+  return Response.json(
+    { ok: rows.length > 0, asof: new Date().toISOString(), rows },
+    { headers: { "cache-control": "public, s-maxage=3600, stale-while-revalidate=7200" } }
+  );
 }
