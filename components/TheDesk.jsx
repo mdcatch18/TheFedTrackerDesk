@@ -1716,6 +1716,12 @@ function Tile({k,v,u,tone,hist,cur}){
 /* ═══════════════  COCKPIT ENGINE  ═══════════════ */
 const LIVE_TAPE=[["S&P 500","SPY"],["Nasdaq 100","QQQ"],["Russell 2000","IWM"],["Dow 30","DIA"],["Dev ex-US","EFA"],["Vol (VIXY)","VIXY"],["20y Treasury","TLT"],["IG Credit","LQD"],["HY Credit","HYG"],["Gold","GLD"],["Silver","SLV"],["Oil (USO)","USO"],["Commodities","DBC"],["US Dollar","UUP"],["Bitcoin","BITO"],["Ether","ETHA"]];
 function Cockpit({m,posture,pc,go,quotes={},zdata={}}){
+  const [hist,setHist]=useState(null);
+  useEffect(()=>{let on=true;
+    fetch("/api/history").then(r=>r.json()).then(j=>{if(on&&j&&j.ok&&j.h)setHist(j.h);}).catch(()=>{});
+    return()=>{on=false;};
+  },[]);
+  const H=hist||{};
   const qN=Object.keys(quotes).length, zN=Object.keys(zdata).length;
   const netliq=m.fedBS-m.tga-m.rrp, s2s10=(m.y10-m.y2)*100;
   const vixLive=m.vix!=null?m.vix:17.8;
@@ -1734,17 +1740,19 @@ function Cockpit({m,posture,pc,go,quotes={},zdata={}}){
   const regName=inf>.15?(g>=0?"Overheating":"Late-cycle · Stagflation risk"):(g>=0?"Goldilocks / Expansion":"Slowdown / Recession risk");
   const rc=regName.includes("Stagflation")?C.amber:regName.includes("Recession")?C.red:regName.includes("Goldilocks")?C.teal:C.violet;
   const fciWord=fci>0.3?"tight":fci>0?"mildly tight":"loose", fciDir=fci>H_FCI[H_FCI.length-1]?"tightening":"easing";
+  // live history where available, else seeded shape
+  const hh=(live,seed)=>Array.isArray(live)&&live.length?live:seed;
   const tiles=[
     ["Composite Risk",`${composite}`,"",band[1],H_RISK,composite,"RSK"],
     ["Net Liquidity",`$${fmt(netliq,2)}T`,"",netliq<5.67?C.red:C.teal,H_LIQ,netliq,"LIQ"],
     ["Fin. Conditions",`${fci>=0?"+":""}${fmt(fci,2)}`,"",fci>0.3?C.red:fci>0?C.amber:C.teal,H_FCI,fci,"XAS"],
-    ["2s10s",`${s2s10>=0?"+":""}${fmt(s2s10,0)}`,"bp",s2s10>=0?C.teal:C.red,H_2S10,s2s10,"RTS"],
-    ["HY OAS",`${fmt(m.hyOAS,0)}`,"bp",m.hyOAS>320?C.red:C.teal,H_HY,m.hyOAS,"CRD"],
+    ["2s10s",`${s2s10>=0?"+":""}${fmt(s2s10,0)}`,"bp",s2s10>=0?C.teal:C.red,hh(H.s2s10,H_2S10),s2s10,"RTS"],
+    ["HY OAS",`${fmt(m.hyOAS,0)}`,"bp",m.hyOAS>320?C.red:C.teal,hh(H.hy,H_HY),m.hyOAS,"CRD"],
     ["Core PCE",`${fmt(m.corePCE,1)}`,"%",m.corePCE>3?C.red:C.teal,H_PCE,m.corePCE,"MAC"],
-    ["WTI Crude",`$${fmt(m.oil,0)}`,"",m.oil>85?C.red:C.txt,H_WTI,m.oil,"CMD"],
-    ["VIX",m.vix!=null?fmt(m.vix,1):"17.8","",m.vix>25?C.red:C.dim,H_VIX,vixLive,"VOL"],
+    ["WTI Crude",`$${fmt(m.oil,0)}`,"",m.oil>85?C.red:C.txt,hh(H.wti,H_WTI),m.oil,"CMD"],
+    ["VIX",m.vix!=null?fmt(m.vix,1):"17.8","",m.vix>25?C.red:C.dim,hh(H.vix,H_VIX),vixLive,"VOL"],
     ["Gold","2,680","",C.amber,H_GOLD,2680,"CMD"],
-    ["USD (broad)",m.dollar!=null?fmt(m.dollar,1):"104.2","",C.cyan,H_DXY,m.dollar??104.2,"FXC"],
+    ["USD (broad)",m.dollar!=null?fmt(m.dollar,1):"104.2","",C.cyan,hh(H.dxy,H_DXY),m.dollar??104.2,"FXC"],
     ["GDPNow",`${fmt(m.gdpnow,1)}`,"%",m.gdpnow<1.5?C.amber:C.teal,H_GDP,m.gdpnow,"MAC"],
     ["ISM Mfg",`${fmt(m.ism,1)}`,"",m.ism<50?C.red:C.teal,H_ISM,m.ism,"MAC"],
   ];
