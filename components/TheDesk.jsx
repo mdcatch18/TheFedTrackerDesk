@@ -1300,37 +1300,51 @@ function Commodities({m,eia={}}){
 }
 
 function FXDesk(){
-  const carry=[...FXG10].sort((a,b)=>Math.abs(b[3])-Math.abs(a[3]));
+  const [d,setD]=useState(null);
+  const [st,setSt]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/fx").then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok&&Array.isArray(j.rows)){setD(j);setSt("live");}else setSt("error");
+    }).catch(()=>{on&&setSt("error");});
+    return()=>{on=false;};
+  },[]);
+  const rows=d?.rows||[];
+  const g10=rows.filter(r=>["EUR/USD","USD/JPY","GBP/USD","USD/CHF","USD/CAD","AUD/USD"].includes(r.label));
+  const em=rows.filter(r=>["USD/CNY","USD/MXN","USD/BRL","USD/INR"].includes(r.label));
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>FX & Carry</span>
+     <Chip label={st==="live"?"● LIVE · FRED":st==="loading"?"○ loading…":"● offline"} tone={st==="live"?C.teal:st==="error"?C.red:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>spot · 1y % · FRED H.10 daily</span>
+   </div>
    <div style={grid2}>
-    <Panel title="G10 FX" tag="spot · YTD% · 2y diff vs US" accent={C.cyan}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
-        <span style={{font:`600 9px ${SANS}`,color:C.faint}}>pair</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>spot</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>YTD</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>2y diff</span>
+    <Panel title="G10 FX" tag="FRED · live" accent={C.cyan} sub="spot · 1y %">
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
+        <span style={{font:`600 9px ${SANS}`,color:C.faint}}>pair</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>spot</span><span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>1y %</span>
       </div>
-      {FXG10.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<FXG10.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-        <span style={{font:`600 11px ${MONO}`,color:C.txt,textAlign:"right"}}>{r[1]}</span>
-        <span style={{font:`600 10px ${MONO}`,color:r[2]>=0?C.teal:C.red,textAlign:"right"}}>{r[2]>=0?"+":""}{fmt(r[2],1)}</span>
-        <span style={{font:`600 10px ${MONO}`,color:r[3]>=0?C.teal:C.red,textAlign:"right"}}>{r[3]>=0?"+":""}{fmt(r[3],2)}</span></div>))}
+      {g10.length?g10.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<g10.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.label}</span>
+        <span style={{font:`600 11px ${MONO}`,color:C.txt,textAlign:"right"}}>{r.spot==null?"—":fmt(r.spot,r.spot>50?2:4)}</span>
+        <span style={{font:`600 10px ${MONO}`,color:r.chg>=0?C.teal:C.red,textAlign:"right"}}>{r.chg==null?"—":`${r.chg>=0?"+":""}${fmt(r.chg,1)}`}</span></div>)):<div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"8px 0"}}>{st==="loading"?"Loading…":"Couldn't reach /api/fx."}</div>}
     </Panel>
-    <Panel title="EM FX" tag="spot · YTD%" accent={C.red}>
-      {FXEM.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<FXEM.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-        <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r[1]}</span>
-        <span style={{font:`600 10px ${MONO}`,color:r[2]<=0?C.teal:C.red,minWidth:44,textAlign:"right"}}>{r[2]>=0?"+":""}{fmt(r[2],1)}%</span></div>))}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>TRY & MXN carry the depreciation tail; a firm dollar is the shared pressure point.</div>
+    <Panel title="EM FX" tag="FRED · live" accent={C.red} sub="spot · 1y %">
+      {em.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<em.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.label}</span>
+        <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r.spot==null?"—":fmt(r.spot,r.spot>50?2:4)}</span>
+        <span style={{font:`600 10px ${MONO}`,color:r.chg<=0?C.teal:C.red,minWidth:44,textAlign:"right"}}>{r.chg==null?"—":`${r.chg>=0?"+":""}${fmt(r.chg,1)}%`}</span></div>))}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>A rising USD pair = local currency weakening. Watch the shared dollar direction across the block.</div>
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Carry Ranking" tag="by 2y rate differential" accent={C.teal}>
-      {carry.map((r,i)=>{const w=clamp(Math.abs(r[3])/3.2*100,6,100);return(
+    <Panel title="Carry & Momentum" tag="manual · 2y rate diff" accent={C.teal}>
+      {FXG10.map((r,i)=>{const w=clamp(Math.abs(r[3])/3.2*100,6,100);return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"88px 1fr 46px",alignItems:"center",gap:8,padding:"6px 0"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
           <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${w}%`,background:r[3]>=0?C.teal:C.red,opacity:.8,borderRadius:3}}/></div>
           <span style={{font:`600 11px ${MONO}`,color:r[3]>=0?C.teal:C.red,textAlign:"right"}}>{r[3]>=0?"+":""}{fmt(r[3],2)}</span></div>);})}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:6}}>USD/JPY & USD/CHF the funding-carry extremes; carry works until FX vol spikes.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:6}}>Manual — 2y rate differentials; refresh from the Rates desk periodically.</div>
     </Panel>
-    <Panel title="Valuation & Vol" tag="PPP · implied vol" accent={C.violet}>
+    <Panel title="Valuation & Vol" tag="manual · PPP / implied vol" accent={C.violet}>
       <div style={{font:`600 10px ${SANS}`,color:C.dim,marginBottom:4}}>PPP valuation</div>
       {FXVAL.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"64px 1fr auto",gap:8,alignItems:"center",padding:"5px 0"}}>
         <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
@@ -1338,6 +1352,7 @@ function FXDesk(){
         <Chip label={r[2]} tone={r[2]==="cheap"?C.teal:r[2]==="rich"?C.red:C.dim}/></div>))}
       <div style={{font:`600 10px ${SANS}`,color:C.dim,margin:"8px 0 4px"}}>Implied vol</div>
       {FXVOL.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={FXVOL.length}/>)}
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:6}}>Manual — PPP & implied vol have no free real-time feed.</div>
     </Panel>
    </div>
   </div>);
