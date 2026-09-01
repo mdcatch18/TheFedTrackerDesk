@@ -1197,30 +1197,46 @@ function Rates({m}){
 }
 
 function Credit({m}){
+  const [d,setD]=useState(null);
+  const [st,setSt]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/credit").then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok&&Array.isArray(j.rows)){setD(j);setSt("live");}else setSt("error");
+    }).catch(()=>{on&&setSt("error");});
+    return()=>{on=false;};
+  },[]);
+  const rows=d?.rows||[];
+  const LBL={IG:"IG (BAML OAS)",BBB:"BBB",HY:"HY (BAML OAS)",CCC:"CCC & lower",EM:"EM $ sovereign"};
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Credit & Funding</span>
+     <Chip label={st==="live"?"● LIVE · FRED":st==="loading"?"○ loading…":"● offline"} tone={st==="live"?C.teal:st==="error"?C.red:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>OAS · percentile vs own history · daily</span>
+   </div>
    <div style={grid2}>
-    <Panel title="Credit Spreads" tag="OAS · percentile vs 10y" accent={C.red} sub="live where FRED-backed">
-      {CSPREADS.map((r,i)=>{const c=r[2]>70?C.red:r[2]>45?C.amber:C.teal;return(
-        <div key={i} style={{display:"grid",gridTemplateColumns:"140px 62px 1fr 34px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<CSPREADS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-          <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-          <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r[1]}<span style={{color:C.faint,fontSize:9,marginLeft:2}}>bp</span></span>
-          <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${r[2]}%`,background:c,opacity:.8,borderRadius:3}}/></div>
-          <span style={{font:`600 10px ${MONO}`,color:c,textAlign:"right"}}>{r[2]}%</span>
-        </div>);})}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>HY at the ~38th percentile — still complacent vs history; the widening, not the level, is the signal.</div>
+    <Panel title="Credit Spreads" tag="FRED · live" accent={C.red} sub="OAS bp · percentile rank">
+      {rows.length?rows.map((r,i)=>{const c=r.pctile>70?C.red:r.pctile>45?C.amber:C.teal;return(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"140px 62px 1fr 34px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<rows.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+          <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{LBL[r.label]||r.label}</span>
+          <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{r.bp==null?"—":r.bp}<span style={{color:C.faint,fontSize:9,marginLeft:2}}>bp</span></span>
+          <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${r.pctile||0}%`,background:c,opacity:.8,borderRadius:3}}/></div>
+          <span style={{font:`600 10px ${MONO}`,color:c,textAlign:"right"}}>{r.pctile==null?"—":`${r.pctile}%`}</span>
+        </div>);}):<div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"8px 0"}}>{st==="loading"?"Loading live spreads…":"Couldn't reach /api/credit."}</div>}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Percentile is vs each series' own 3-year history. Watch HY vs CCC: tight HY with stressed CCC = idiosyncratic distress, not broad risk-off.</div>
     </Panel>
-    <Panel title="Credit Derivatives" tag="CDX · iTraxx" accent={C.amber}>
+    <Panel title="Credit Derivatives" tag="manual · CDX / iTraxx" accent={C.amber}>
       {CDX.map((r,i)=><KV key={i} k={r[0]} v={`${r[1]} ${r[2]}`} arrow={r[3]} tone={C.txt} i={i} n={CDX.length}/>)}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Index CDS calm and tracking cash spreads — no basis stress signalling forced selling yet.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — CDX/iTraxx have no free real-time feed.</div>
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Credit Cycle" tag="defaults · issuance" accent={C.red}>
+    <Panel title="Credit Cycle" tag="manual · defaults / issuance" accent={C.red}>
       {CREDITCYCLE.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={CREDITCYCLE.length}/>)}
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — no free real-time feed for default/issuance data.</div>
     </Panel>
-    <Panel title="Funding & Plumbing" tag="dollar / basis stress" accent={C.cyan}>
+    <Panel title="Funding & Plumbing" tag="manual · basis stress" accent={C.cyan}>
       {FUNDING.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={FUNDING.length}/>)}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>FRA-OIS contained; JPY cross-currency basis is the one to watch into any risk-off dollar squeeze.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — SOFR is live via the data route; x-ccy basis / bank CDS have no free feed.</div>
     </Panel>
    </div>
   </div>);
