@@ -1008,6 +1008,12 @@ export default function TheDesk(){
   useEffect(()=>{let on=true;
     fetch("/api/eia").then(r=>r.json()).then(d=>{if(on&&d&&d.series)setEia(d.series);}).catch(()=>{});
     return()=>{on=false;};
+  const [ismH,setIsmH]=useState(null);
+  useEffect(()=>{let on=true;
+    fetch("/api/ism").then(r=>r.json()).then(d=>{if(on&&d&&d.ok&&typeof d.ism==="number"){
+      setM(p=>({...p,ism:d.ism})); setIsmH(d.history||null);
+    }}).catch(()=>{});
+    return()=>{on=false;};
   },[]);
   const net=m.fedBS-m.tga-m.rrp, chg13=net-(LIQ_SERIES[LIQ_SERIES.length-14]?.net??net);
   const g=.4*((m.ism-50)/6)+.4*((m.gdpnow-2)/2)-.2*((m.unemp-4)/1);
