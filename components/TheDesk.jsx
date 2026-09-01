@@ -777,7 +777,7 @@ function Regime({m}){
         <rect x="0" y="0" width="100" height="100" fill={C.teal} opacity=".05"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".05"/>
         <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".05"/><rect x="100" y="100" width="100" height="100" fill={C.amber} opacity=".05"/>
         <line x1="100" y1="6" x2="100" y2="194" stroke={C.line}/><line x1="6" y1="100" x2="194" y2="100" stroke={C.line}/>
-        {[["Goldilocks",150,26],["Overheating",150,178],["Recession",50,26],["Stagflation",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
+        {[["Overheating",150,26],["Stagflation",50,26],["Goldilocks",150,178],["Recession",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
         <text x="196" y="97" fill={C.dim} fontSize="7" fontFamily={MONO} textAnchor="end">growth →</text><text x="103" y="12" fill={C.dim} fontSize="7" fontFamily={MONO}>↑ inflation</text>
         <circle cx={px*2} cy={py*2} r="7" fill={rc} opacity=".25"/><circle cx={px*2} cy={py*2} r="3.4" fill={rc}/>
       </svg>
