@@ -794,31 +794,46 @@ function Regime({m}){
   </div>);
 }
 
-function Global(){
+function Global({quotes={}}){
+  // country -> [display index name, ETF proxy]
+  const MK=[
+    ["Japan (Nikkei proxy)","EWJ"],["China (large-cap)","FXI"],["China (broad)","MCHI"],
+    ["Hong Kong","EWH"],["Taiwan","EWT"],["S. Korea (KOSPI)","EWY"],["India (Sensex)","INDA"],
+    ["Germany (DAX)","EWG"],["UK (FTSE)","EWU"],["France (CAC)","EWQ"],["Europe (broad)","VGK"],
+    ["Canada (TSX)","EWC"],["Australia (ASX)","EWA"],["Brazil (Bovespa)","EWZ"],["EM ex-China","EMXC"],
+  ];
+  const rows=MK.map(([name,sym])=>{const q=quotes[sym];return {name,sym,dp:q&&typeof q.dp==="number"?q.dp:null};})
+    .filter(r=>r.dp!=null).sort((a,b)=>a.dp-b.dp);
+  const live=rows.length>=4;
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Global Risk</span>
+     <Chip label={live?"● LIVE · Finnhub":"● sample"} tone={live?C.teal:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>foreign markets via ETF proxies · day %</span>
+   </div>
    <div style={grid2}>
-    <Panel title="Foreign Markets · Crash Risk" tag="sample · 12 indices" accent={C.red} sub="YTD % · risk 0–100">
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-        {[...GLOBAL].sort((a,b)=>b[3]-a[3]).map(r=>{const rc=r[3]>60?C.red:r[3]>45?C.amber:C.teal;return(
-          <div key={r[0]} style={{display:"grid",gridTemplateColumns:"118px 44px 1fr 28px",alignItems:"center",gap:8}}>
-            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}<span style={{color:C.faint,marginLeft:4,fontSize:9,fontFamily:MONO}}>{r[1]}</span></span>
-            <span style={{font:`600 10px ${MONO}`,color:r[2]>=0?C.teal:C.red,textAlign:"right"}}>{r[2]>=0?"+":""}{r[2]}%</span>
-            <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${r[3]}%`,background:rc,opacity:.8,borderRadius:3}}/></div>
-            <span style={{font:`600 10px ${MONO}`,color:rc,textAlign:"right"}}>{r[3]}</span>
+    <Panel title="Foreign Markets" tag={live?"live · Finnhub":"sample"} accent={C.red} sub="day % · ETF proxy · worst first">
+      {live?(<div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {rows.map(r=>{const w=clamp(50+r.dp*12,4,96);return(
+          <div key={r.sym} style={{display:"grid",gridTemplateColumns:"150px 52px 1fr",alignItems:"center",gap:8}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.name}<span style={{color:C.faint,marginLeft:4,fontSize:9,fontFamily:MONO}}>{r.sym}</span></span>
+            <span style={{font:`600 10px ${MONO}`,color:r.dp>=0?C.teal:C.red,textAlign:"right"}}>{r.dp>=0?"+":""}{fmt(r.dp,2)}%</span>
+            <div style={{height:6,background:C.bg2,borderRadius:3,position:"relative"}}><div style={{position:"absolute",left:"50%",top:0,bottom:0,width:1,background:C.faint}}/><div style={{position:"absolute",left:r.dp>=0?"50%":`${w}%`,width:`${Math.abs(w-50)}%`,top:0,height:"100%",background:r.dp>=0?C.teal:C.red,opacity:.8,borderRadius:2}}/></div>
           </div>);})}
-      </div>
+      </div>):(<div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"8px 0"}}>Loading live foreign-market quotes…</div>)}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Live day moves on country ETF proxies — the cleanest free read on foreign-market direction. Sorted worst to best.</div>
     </Panel>
-    <Panel title="Contagion Map" tag="correlation back to US" accent={C.violet} sub="ρ to S&P · beta">
+    <Panel title="Contagion Map" tag="manual · ρ to S&P" accent={C.violet} sub="correlation · beta">
       {CONTAGION.map((r,i)=>{const c=r[0]>0.75?C.red:r[0]>0.6?C.amber:C.teal;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"140px 1fr 66px",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<CONTAGION.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
           <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${r[0]*100}%`,background:c,opacity:.8,borderRadius:3}}/></div>
           <span style={{font:`600 10px ${MONO}`,color:C.dim,textAlign:"right"}}>ρ{fmt(r[0],2)} β{fmt(r[1],1)}</span>
         </div>);})}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>High-ρ regions (Europe, Canada) transmit US shocks 1:1; low-ρ (China/HK) offer diversification but carry own tails.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — rolling correlations have no free real-time feed.</div>
     </Panel>
    </div>
-   <Panel title="Currency Crash / FX Stress" tag="sample" accent={C.amber} sub="YTD % vs USD · crash-risk 0–100">
+   <Panel title="Currency Stress" tag="manual · FX crash risk" accent={C.amber} sub="see FX desk for live spot">
      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"6px 20px"}}>
        {FX.map((r,i)=>{const rc=r[3]>60?C.red:r[3]>45?C.amber:C.teal;return(
          <div key={i} style={{display:"grid",gridTemplateColumns:"110px 52px 1fr 28px",alignItems:"center",gap:8,padding:"6px 0"}}>
@@ -828,7 +843,7 @@ function Global(){
            <span style={{font:`600 10px ${MONO}`,color:rc,textAlign:"right"}}>{r[3]}</span>
          </div>);})}
      </div>
-     <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:10}}>JPY (carry unwind) and TRY/ZAR (high-beta EM) carry the tail; a dollar surge is the shared contagion trigger.</div>
+     <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:10}}>Manual crash-risk scores — live FX spot is on the FX & Carry desk.</div>
    </Panel>
   </div>);
 }
@@ -1027,7 +1042,7 @@ export default function TheDesk(){
   if(eng==="LIQ")View=<Liquidity m={m}/>;else if(eng==="FED")View=<FedDots m={m}/>;else if(eng==="MAC")View=<Macro live={live?.board||{}}/>;
   else if(eng==="ERN")View=<Earnings/>;else if(eng==="SEC")View=<SectorsThemes bio={bio} quotes={quotes}/>;else if(eng==="POS")View=<Positioning/>;
   else if(eng==="INT")View=<Internals/>;else if(eng==="VAL")View=<Valuation/>;else if(eng==="TRG")View=<Triggers posture={posture} pc={pc}/>;
-  else if(eng==="REG")View=<Regime m={m}/>;else if(eng==="GLB")View=<Global/>;else if(eng==="GEO")View=<Geo/>;else if(eng==="PRD")View=<Predict/>;
+  else if(eng==="REG")View=<Regime m={m}/>;else if(eng==="GLB")View=<Global quotes={quotes}/>;else if(eng==="GEO")View=<Geo/>;else if(eng==="PRD")View=<Predict/>;
   else if(eng==="RTS")View=<Rates m={m}/>;else if(eng==="CRD")View=<Credit m={m}/>;else if(eng==="CMD")View=<Commodities m={m} eia={eia}/>;else if(eng==="FXC")View=<FXDesk/>;else if(eng==="VOL")View=<Volatility/>;
   else if(eng==="GMC")View=<GlobalMacro/>;else if(eng==="CAL")View=<Calendar/>;else if(eng==="XAS")View=<CrossAsset m={m}/>;else if(eng==="RSK")View=<MasterRisk m={m}/>;else View=<Cockpit m={m} posture={posture} pc={pc} go={setEng} quotes={quotes} zdata={live?.z||{}}/>;
   return(
