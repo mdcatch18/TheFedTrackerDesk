@@ -518,6 +518,14 @@ function Earnings(){
 
 function SectorsThemes({bio,quotes={}}){
   const [sel,setSel]=useState("XLK");
+  const [catNews,setCatNews]=useState(null);
+  const [catSt,setCatSt]=useState("loading");
+  useEffect(()=>{let on=true;setCatSt("loading");setCatNews(null);
+    fetch(`/api/symbol-news?symbol=${sel}`).then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok&&Array.isArray(j.items)&&j.items.length){setCatNews(j.items);setCatSt("live");}else setCatSt("empty");
+    }).catch(()=>{on&&setCatSt("error");});
+    return()=>{on=false;};
+  },[sel]);
   const e=U.find(x=>x[0]===sel)||U[0];
   const [code,name,grp,a,thesis,cats,dr,rr]=e;
   const mo=MOM[code]??0, rs=clamp(Math.round(50+mo*1.6),1,99);
@@ -597,6 +605,17 @@ function SectorsThemes({bio,quotes={}}){
               <div style={{font:`400 12px ${SANS}`,color:C.txt,lineHeight:1.45}}>{rr}</div>
             </div>
           </div>
+        </Panel>
+        <Panel title="Live Catalysts & News" tag={catSt==="live"?`● LIVE · Finnhub · ${code}`:catSt==="loading"?"○ loading…":"no recent news"} accent={a} sub="recent headlines for this name · tap to open">
+          {catSt==="live"?(<div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column"}}>
+            {(()=>{const now=Date.now()/1000;const ago=t=>{const s=Math.max(0,now-t);if(s<3600)return `${Math.round(s/60)}m`;if(s<86400)return `${Math.round(s/3600)}h`;return `${Math.round(s/86400)}d`;};
+            return catNews.map((n,i)=>(
+              <a key={i} href={n.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",display:"grid",gridTemplateColumns:"40px 1fr auto",gap:9,alignItems:"center",padding:"7px 4px",borderBottom:i<catNews.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+                <span style={{font:`600 10px ${MONO}`,color:C.faint,textAlign:"right"}}>{ago(n.ts)}</span>
+                <span style={{font:`500 12px ${SANS}`,color:C.txt,lineHeight:1.35}}>{n.headline}</span>
+                <span style={{font:`500 9px ${MONO}`,color:C.dim,whiteSpace:"nowrap"}}>{n.source}</span>
+              </a>));})()}
+          </div>):(<div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"8px 0"}}>{catSt==="loading"?"Loading live headlines…":`No recent Finnhub news for ${code}. Try a broader sector ETF.`}</div>)}
         </Panel>
         {code==="BBP"&&(<div style={grid2}>
           <Panel title="Regulatory Calendar" tag="sample · openFDA" accent={C.violet}>
