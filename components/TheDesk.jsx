@@ -279,7 +279,7 @@ function Liquidity({m}){
           <Tooltip content={<TT/>}/><Area type="monotone" dataKey="net" stroke={C.cyan} strokeWidth={1.6} fill="url(#lq)"/>
         </AreaChart></ResponsiveContainer></div>
     </Panel>
-    <Panel title="Global CB Liquidity (G4)" tag="FRED+ECB+BoJ+PBoC" accent={C.violet} sub="USD-equiv, $T">
+    <Panel title="Global CB Liquidity (G4)" tag="manual · G4 balance sheets" accent={C.violet} sub="USD-equiv, $T · update monthly">
       <div style={{display:"flex",gap:16,marginBottom:10,flexWrap:"wrap"}}>
         <Stat k="G4 aggregate" v="$24.5T" tone={C.violet} sub={`13w ${g4chg>=0?"+":""}${fmt(g4chg,2)}T`}/>
         <Stat k="Net impulse" v={g4chg<0?"Contracting":"Expanding"} tone={g4chg<0?C.red:C.teal} sub="global risk driver"/>
@@ -290,7 +290,7 @@ function Liquidity({m}){
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Money-Market Plumbing" tag="funding stress" accent={C.amber}>
+    <Panel title="Money-Market Plumbing" tag="manual · funding" accent={C.amber}>
       {PLUMB.map((r,i)=><KV key={r[0]} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={PLUMB.length}/>)}
     </Panel>
     <Panel title="Sector Fund Flows" tag="sample · 4w Σ $B" accent={C.teal}>
@@ -328,7 +328,7 @@ function FedDots({m}){
   const stripMax=Math.max(...SOFR_STRIP.map(s=>s[1])),stripMin=Math.min(...SOFR_STRIP.map(s=>s[1]));
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={grid2}>
-    <Panel title="SEP Dot Plot" tag="19 participants · median" accent={C.amber} sub="dots vs market path">
+    <Panel title="SEP Dot Plot" tag="manual · post-FOMC" accent={C.amber} sub="dots vs market path · update after each SEP">
       <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H}}>
         {[3.0,3.5,4.0,4.5].map(r=>(<g key={r}><line x1={padL} y1={yOf(r)} x2={W-8} y2={yOf(r)} stroke={C.lineSoft}/><text x={4} y={yOf(r)+3} fill={C.faint} fontSize="8" fontFamily={MONO}>{r.toFixed(1)}</text></g>))}
         {YRS.map((yr,i)=>(<text key={yr} x={xOf(i)} y={H-8} fill={C.dim} fontSize="9" fontFamily={MONO} textAnchor="middle">{yr}</text>))}
@@ -342,7 +342,7 @@ function FedDots({m}){
         <span style={{font:`500 10px ${MONO}`,color:C.amber}}>● Fed median</span><span style={{font:`500 10px ${MONO}`,color:C.cyan}}>— — market</span>
       </div>
     </Panel>
-    <Panel title="SOFR Futures Strip" tag="terminal-rate pricing" accent={C.cyan} sub="implied by meeting">
+    <Panel title="SOFR Futures Strip" tag="manual · SOFR futures" accent={C.cyan} sub="implied by meeting">
       <div style={{display:"flex",flexDirection:"column",gap:7,marginTop:2}}>
         {SOFR_STRIP.map((s,i)=>{const w=((s[1]-stripMin)/(stripMax-stripMin||1))*100;return(
           <div key={i} style={{display:"grid",gridTemplateColumns:"58px 1fr 42px",alignItems:"center",gap:8}}>
@@ -355,7 +355,7 @@ function FedDots({m}){
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Fed Speaker Scorecard" tag="hawk–dove lean" accent={C.amber}>
+    <Panel title="Fed Speaker Scorecard" tag="manual · hawk–dove" accent={C.amber}>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
         <Chip label={`${hawks} hawk`} tone={C.red}/><Chip label={`${FOMC.length-hawks-doves} neutral`} tone={C.dim}/><Chip label={`${doves} dove`} tone={C.teal}/>
         <span style={{font:`600 11px ${MONO}`,color:hawks>doves?C.red:doves>hawks?C.teal:C.amber,marginLeft:"auto"}}>{hawks>doves?"net hawkish":doves>hawks?"net dovish":"chair-led hawkish"}</span>
@@ -624,7 +624,7 @@ function Positioning(){
   const contango=GEX.vix[2][1]>GEX.vix[0][1];
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={grid2}>
-    <Panel title="Dealer Gamma (GEX)" tag="sample · positioning" accent={C.violet}>
+    <Panel title="Dealer Gamma (GEX)" tag="manual · no free feed" accent={C.violet}>
       <div style={{display:"flex",gap:18,marginBottom:10,flexWrap:"wrap"}}>
         <Stat k="Net GEX" v={`${GEX.net}`} u="$bn" tone={GEX.net<0?C.red:C.teal} sub={GEX.net<0?"short gamma → moves amplify":"long gamma → pinned"}/>
         <Stat k="Gamma flip" v={GEX.flip} sub="below = unstable"/>
@@ -646,7 +646,7 @@ function Positioning(){
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Fund Manager Survey" tag="sample · monthly" accent={C.amber}>
+    <Panel title="Fund Manager Survey" tag="manual · monthly" accent={C.amber}>
       <div style={{display:"flex",gap:18,marginBottom:12,flexWrap:"wrap"}}>
         <Stat k="Cash level" v={fmt(FMS.cash,1)} u="%" tone={FMS.cash>5?C.teal:C.amber} sub={FMS.cash>5?"buy signal >5%":"below trigger"}/>
         <Stat k="NAAIM exposure" v={FMS.naaim} sub="active mgr net long"/>
@@ -654,7 +654,7 @@ function Positioning(){
       </div>
       <KV k="Positioning" v={FMS.tilt} i={0} n={3}/><KV k="Most-crowded trade" v={FMS.crowded} tone={C.violet} i={1} n={3}/><KV k="Biggest tail risk" v={FMS.tail} tone={C.amber} i={2} n={3}/>
     </Panel>
-    <Panel title="Short Interest" tag="sample · squeeze radar" accent={C.red} sub="% float · days-to-cover">
+    <Panel title="Short Interest" tag="manual · squeeze radar" accent={C.red} sub="% float · days-to-cover">
       {SHORTINT.map((r,i)=>{const c=r[2]>10?C.red:r[2]>7?C.amber:C.dim;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 60px 60px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<SHORTINT.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}<span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:5}}>{r[1]}</span></span>
@@ -668,15 +668,15 @@ function Positioning(){
 
 function Internals(){
   return(<div style={grid2}>
-    <Panel title="Market Breadth" tag="internals" accent={C.cyan}>
+    <Panel title="Market Breadth" tag="manual · internals" accent={C.cyan}>
       {BREADTH.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={r[2]==="d"?C.red:C.txt} i={i} n={BREADTH.length}/>)}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Breadth deteriorating under the surface — index held up by a narrow top.</div>
     </Panel>
-    <Panel title="Concentration" tag="narrowness" accent={C.amber}>
+    <Panel title="Concentration" tag="manual · narrowness" accent={C.amber}>
       {CONCEN.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={r[2]==="u"?C.amber:C.red} i={i} n={CONCEN.length}/>)}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Top-heavy tape: fragility if the mega-cap complex wobbles.</div>
     </Panel>
-    <Panel title="Dispersion & Correlation" tag="regime texture" accent={C.violet}>
+    <Panel title="Dispersion & Correlation" tag="manual · regime texture" accent={C.violet}>
       {DISPERS.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={DISPERS.length}/>)}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Low index correlation + high dispersion = a stock-picker's / rotation tape.</div>
     </Panel>
@@ -686,7 +686,7 @@ function Internals(){
 function Valuation(){
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={grid2}>
-    <Panel title="Valuation Dashboard" tag="percentile vs history" accent={C.red}>
+    <Panel title="Valuation Dashboard" tag="manual · percentile" accent={C.red}>
       {VAL_METRICS.map((r,i)=>{const c=r[2]>85?C.red:r[2]>60?C.amber:C.teal;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"120px 60px 1fr 34px",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<VAL_METRICS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
@@ -696,7 +696,7 @@ function Valuation(){
         </div>);})}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Nearly every gauge in the 85th+ percentile — rich, but rich isn't a timing signal on its own.</div>
     </Panel>
-    <Panel title="Equity Risk Premium" tag="the cushion" accent={C.amber}>
+    <Panel title="Equity Risk Premium" tag="manual · the cushion" accent={C.amber}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"8px 0"}}>
         <Gauge value={clamp(ERP.val/6*100,0,100)} color={ERP.val<3?C.red:C.teal} cap={`${fmt(ERP.val,1)}%`}/>
         <Chip label={ERP.val<3?"Thin cushion":"Adequate"} tone={ERP.val<3?C.red:C.teal}/>
@@ -704,7 +704,7 @@ function Valuation(){
       <div style={{font:`400 11px ${SANS}`,color:C.faint,marginTop:6,lineHeight:1.5}}>{ERP.note}. When ERP compresses like this, equities are pricing perfection — small growth shocks hit harder.</div>
     </Panel>
    </div>
-   <Panel title="Sentiment Tape" tag="contrarian read" accent={C.violet}>
+   <Panel title="Sentiment Tape" tag="manual · contrarian" accent={C.violet}>
      <div style={grid2}>
        {SENT.map((r,i)=>(<div key={i} style={{background:C.bg2,border:`1px solid ${C.lineSoft}`,borderRadius:5,padding:"9px 11px"}}>
          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
@@ -818,7 +818,7 @@ function Regime({m}){
       </div>
     </Panel>
    </div>
-   <Panel title="Living Cycle Analog" tag="1994 · 2018 · 2022 vs now" accent={C.cyan} sub="normalized index, week 0 = cycle start">
+   <Panel title="Living Cycle Analog" tag="illustrative · analog paths" accent={C.cyan} sub="normalized index, week 0 = cycle start">
      <div style={{height:210,width:"100%"}}><ResponsiveContainer>
        <LineChart margin={{top:6,right:10,left:-18,bottom:0}} data={Array.from({length:ALEN},(_,i)=>{const o={w:i};ANALOGS.forEach(a=>{o[a.k]=a.pts[i];});return o;})}>
          <XAxis dataKey="w" {...chartAxis}/><YAxis {...chartAxis} width={38}/>
@@ -894,7 +894,7 @@ function Global({quotes={}}){
 function Geo(){
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
     <div style={grid2}>
-      <Panel title="Global Risk Condition" tag="composite · GRC" accent={C.amber}>
+      <Panel title="Global Risk Condition" tag="manual · analyst view" accent={C.amber}>
         <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}><Gauge value={62} color={C.amber} cap="GRC 3"/><Chip label="Elevated" tone={C.amber}/></div>
           <div style={{flex:1,minWidth:150,display:"flex",flexDirection:"column",gap:6}}>
@@ -902,13 +902,13 @@ function Geo(){
           </div>
         </div>
       </Panel>
-      <Panel title="OSINT Signals" tag="alt-data · sample" accent={C.pink}>
+      <Panel title="OSINT Signals" tag="manual · analyst view" accent={C.pink}>
         {OSINT.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 12px",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<OSINT.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <div><span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span><div style={{font:`400 9px ${MONO}`,color:C.faint}}>{r[3]}</div></div>
           <span style={{font:`600 11px ${MONO}`,color:C.dim}}>{r[1]}</span><span style={{font:`600 9px ${MONO}`,color:ARR[r[2]][1]}}>{ARR[r[2]][0]}</span></div>))}
       </Panel>
     </div>
-    <Panel title="Scenario Odds → Asset Impact" tag="sample · tail map" accent={C.red}>
+    <Panel title="Scenario Odds → Asset Impact" tag="manual · analyst view" accent={C.red}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 44px 52px 52px 52px 60px",gap:8,alignItems:"center",padding:"0 0 7px",borderBottom:`1px solid ${C.line}`}}>
         <span style={{font:`600 9px ${SANS}`,color:C.faint}}>scenario</span>
         <span style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"right"}}>prob</span>
@@ -928,13 +928,13 @@ function Geo(){
         </div>);})}
     </Panel>
     <div style={grid2}>
-      <Panel title="Safe-Haven Linkage Model" tag="if geo escalates →" accent={C.blue}>
+      <Panel title="Safe-Haven Linkage Model" tag="manual · linkage logic" accent={C.blue}>
         {LINKAGE.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"120px 20px 1fr",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<LINKAGE.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:r[3]}}>{r[0]}</span>
           <span style={{font:`700 13px ${MONO}`,color:r[1]==="+"?C.teal:C.red}}>{r[1]}</span>
           <span style={{font:`400 10px ${SANS}`,color:C.dim}}>{r[2]}</span></div>))}
       </Panel>
-      <Panel title="Maritime Chokepoints" tag="supply-chain tails" accent={C.cyan}>
+      <Panel title="Maritime Chokepoints" tag="manual · watchlist" accent={C.cyan}>
         {[["Strait of Hormuz","elevated"],["Taiwan Strait","watch"],["Red Sea / Bab-el-Mandeb","elevated"],["Suez Canal","watch"],["Panama Canal","clear"],["Black Sea / Ukraine","elevated"]].map((r,i,arr)=>{const rc=r[1]==="elevated"?C.amber:r[1]==="watch"?C.blue:C.teal;return(
           <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"8px 0",borderBottom:i<arr.length-1?`1px solid ${C.lineSoft}`:"none"}}>
             <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span><Chip label={r[1]} tone={rc}/></div>);})}
@@ -1007,7 +1007,7 @@ function Predict(){
             :<ListItem key={i} item={item} t={t} last={i===g.items.length-1}/>)}
         </Panel>);})}
     </div>)}
-    <Panel title="Calibration Track Record" tag="accuracy by class" accent={C.blue} sub="Brier · hit-rate">
+    <Panel title="Calibration Track Record" tag="illustrative · sample" accent={C.blue} sub="Brier · hit-rate">
       {CALIB.map((r,i)=>{const c=r[2]>85?C.teal:r[2]>72?C.amber:C.red;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"120px 54px 1fr 34px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<CALIB.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
@@ -1474,7 +1474,7 @@ function Volatility(){
 function GlobalMacro(){
   const pmiHeat=v=>{const al=clamp(Math.abs(v-50)/8,.08,.7);return v>=50?`rgba(63,191,147,${al})`:`rgba(224,96,90,${al})`;};
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
-    <Panel title="Country Scorecards" tag="growth · inflation · policy" accent={C.blue} sub="GDP% · CPI% · policy% · U% · mfg PMI">
+    <Panel title="Country Scorecards" tag="manual · monthly" accent={C.blue} sub="GDP% · CPI% · policy% · U% · mfg PMI">
       <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr 1fr 1fr 1fr 1fr",gap:8,padding:"0 0 7px",borderBottom:`1px solid ${C.line}`}}>
         {["Country","GDP","CPI","Policy","Unemp","PMI"].map((h,i)=><span key={i} style={{font:`600 9px ${SANS}`,color:C.faint,textAlign:i?"right":"left"}}>{h}</span>)}
       </div>
@@ -1487,7 +1487,7 @@ function GlobalMacro(){
         <span style={{font:`600 11px ${MONO}`,color:r[6]<50?C.red:C.teal,textAlign:"right"}}>{fmt(r[6],1)}</span></div>))}
     </Panel>
     <div style={grid2}>
-    <Panel title="Global PMI Heatmap" tag="mfg · services" accent={C.cyan} sub="50 = expansion line">
+    <Panel title="Global PMI Heatmap" tag="manual · monthly" accent={C.cyan} sub="50 = expansion line">
       <div style={{display:"grid",gridTemplateColumns:"1.3fr 1fr 1fr",gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
         <span style={{font:`600 9px ${SANS}`,color:C.faint}}>region</span><span style={{font:`600 9px ${SANS}`,color:C.faint,textAlign:"center"}}>mfg</span><span style={{font:`600 9px ${SANS}`,color:C.faint,textAlign:"center"}}>svcs</span>
       </div>
@@ -1496,7 +1496,7 @@ function GlobalMacro(){
         <div style={{background:pmiHeat(r[1]),borderRadius:3,textAlign:"center",padding:"4px 0",font:`600 11px ${MONO}`,color:C.txt}}>{fmt(r[1],1)}</div>
         <div style={{background:pmiHeat(r[2]),borderRadius:3,textAlign:"center",padding:"4px 0",font:`600 11px ${MONO}`,color:C.txt}}>{fmt(r[2],1)}</div></div>))}
     </Panel>
-    <Panel title="Central Bank Tracker" tag="policy · bias · next" accent={C.amber}>
+    <Panel title="Central Bank Tracker" tag="manual · policy calendar" accent={C.amber}>
       {CBTRACK.map((r,i)=>{const bc=r[2]==="hawk"?C.red:r[2]==="dove"?C.teal:C.dim;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<CBTRACK.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
@@ -1518,7 +1518,7 @@ function Calendar(){
       </div>))}
     </div>
     <div style={grid2}>
-    <Panel title="Upcoming Releases" tag="consensus vs prior" accent={C.pink} sub="next 5 weeks">
+    <Panel title="Upcoming Releases" tag="manual · consensus" accent={C.pink} sub="next 5 weeks">
       <div style={{display:"grid",gridTemplateColumns:"48px 1fr auto auto 10px",gap:8,padding:"0 0 6px",borderBottom:`1px solid ${C.line}`}}>
         {["","release","cons.","prior",""].map((h,i)=><span key={i} style={{font:`600 9px ${SANS}`,color:C.faint,textAlign:i>1&&i<4?"right":"left"}}>{h}</span>)}
       </div>
@@ -1530,14 +1530,14 @@ function Calendar(){
         <span style={{width:6,height:6,borderRadius:"50%",background:IC[r[4]]}}/></div>))}
     </Panel>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
-    <Panel title="Recent Surprises" tag="actual vs consensus" accent={C.cyan}>
+    <Panel title="Recent Surprises" tag="manual · actual vs cons" accent={C.cyan}>
       {RECENT.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"48px 1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<RECENT.length-1?`1px solid ${C.lineSoft}`:"none"}}>
         <span style={{font:`600 10px ${MONO}`,color:C.dim}}>{r[0]}</span>
         <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[1]}</span>
         <span style={{font:`600 11px ${MONO}`,color:C.txt}}>{r[2]}<span style={{color:C.faint,fontSize:9}}> /{r[3]}</span></span>
         <span style={{font:`700 12px ${MONO}`,color:r[4]==="+"?C.teal:C.red}}>{r[4]}</span></div>))}
     </Panel>
-    <Panel title="Surprise Index" tag="Citi-style trend" accent={C.amber}>
+    <Panel title="Surprise Index" tag="manual · Citi-style" accent={C.amber}>
       <div style={{height:96,width:"100%"}}><ResponsiveContainer>
         <AreaChart data={CITI_HIST.map((v,i)=>({w:`w${i}`,v}))} margin={{top:6,right:8,left:-24,bottom:0}}>
           <defs><linearGradient id="citi" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.red} stopOpacity={.3}/><stop offset="100%" stopColor={C.red} stopOpacity={0}/></linearGradient></defs>
@@ -1558,7 +1558,7 @@ function CrossAsset({m}){
   const riskApp=clamp(50-fciNow*30-((m.hyOAS-288)/6)+((m.gdpnow-1.1)*8),2,98);
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={grid2}>
-    <Panel title="Cross-Asset Correlation" tag="rolling 60d" accent={C.cyan} sub="red +  ·  blue −">
+    <Panel title="Cross-Asset Correlation" tag="manual · rolling 60d" accent={C.cyan} sub="red +  ·  blue −">
       <div style={{overflowX:"auto"}}>
         <div style={{display:"grid",gridTemplateColumns:`58px repeat(${XASSETS.length},1fr)`,gap:2,minWidth:420}}>
           <span/>
@@ -1571,7 +1571,7 @@ function CrossAsset({m}){
       </div>
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>SPX–VIX deeply inverse (−.82) as expected; SPX–Gold slightly positive = liquidity-driven tape, not classic haven behavior.</div>
     </Panel>
-    <Panel title="Returns Quilt" tag="asset-class · % return" accent={C.violet} sub="heat by magnitude">
+    <Panel title="Returns Quilt" tag="manual · % return" accent={C.violet} sub="heat by magnitude">
       <div style={{display:"grid",gridTemplateColumns:"1.4fr repeat(4,1fr)",gap:4,padding:"0 0 5px",borderBottom:`1px solid ${C.line}`}}>
         <span style={{font:`600 9px ${SANS}`,color:C.faint}}>asset</span>
         {QCOLS.map(c=><span key={c} style={{font:`600 9px ${MONO}`,color:C.faint,textAlign:"center"}}>{c}</span>)}
