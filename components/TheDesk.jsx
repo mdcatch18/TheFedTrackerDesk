@@ -1043,7 +1043,7 @@ export default function TheDesk(){
   else if(eng==="ERN")View=<Earnings/>;else if(eng==="SEC")View=<SectorsThemes bio={bio} quotes={quotes}/>;else if(eng==="POS")View=<Positioning/>;
   else if(eng==="INT")View=<Internals/>;else if(eng==="VAL")View=<Valuation/>;else if(eng==="TRG")View=<Triggers posture={posture} pc={pc}/>;
   else if(eng==="REG")View=<Regime m={m}/>;else if(eng==="GLB")View=<Global quotes={quotes}/>;else if(eng==="GEO")View=<Geo/>;else if(eng==="PRD")View=<Predict/>;
-  else if(eng==="RTS")View=<Rates m={m}/>;else if(eng==="CRD")View=<Credit m={m}/>;else if(eng==="CMD")View=<Commodities m={m} eia={eia}/>;else if(eng==="FXC")View=<FXDesk/>;else if(eng==="VOL")View=<Volatility/>;
+  else if(eng==="RTS")View=<Rates m={m}/>;else if(eng==="CRD")View=<Credit m={m}/>;else if(eng==="CMD")View=<Commodities m={m} eia={eia} quotes={quotes}/>;else if(eng==="FXC")View=<FXDesk/>;else if(eng==="VOL")View=<Volatility/>;
   else if(eng==="GMC")View=<GlobalMacro/>;else if(eng==="CAL")View=<Calendar/>;else if(eng==="XAS")View=<CrossAsset m={m}/>;else if(eng==="RSK")View=<MasterRisk m={m}/>;else View=<Cockpit m={m} posture={posture} pc={pc} go={setEng} quotes={quotes} zdata={live?.z||{}}/>;
   return(
     <div style={{background:C.bg0,minHeight:"100vh",color:C.txt,fontFamily:SANS,padding:14}}>
@@ -1257,7 +1257,7 @@ function Credit({m}){
   </div>);
 }
 
-function Commodities({m,eia={}}){
+function Commodities({m,eia={},quotes={}}){
   const E=eia||{}, hasE=Object.keys(E).length>0;
   const eKey={"WTI crude":"wti","Brent":"brent","Nat gas (HH)":"henryhub"};
   const eVal=(r)=>{ if(r[0]==="WTI–Brent"&&E.wti&&E.brent)return {v:fmt(E.wti.value-E.brent.value,1),live:true};
@@ -1290,11 +1290,13 @@ function Commodities({m,eia={}}){
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Metals & Ratios" tag="growth / haven reads" accent={C.amber}>
-      {METALS.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<METALS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-        <span style={{font:`500 11px ${SANS}`,color:C.dim}}>{r[0]}</span>
-        <span style={{font:`600 12px ${MONO}`,color:r[0].includes("Gold")?C.amber:C.txt}}>{r[1]}<span style={{color:C.faint,fontSize:9,marginLeft:3}}>{r[2]}</span></span></div>))}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:6}}>Gold/copper elevated = market pricing haven over growth; watch Dr. Copper for the turn.</div>
+    <Panel title="Metals" tag="live · Finnhub proxies" accent={C.amber} sub="day % on metal ETFs">
+      {[["Gold","GLD"],["Silver","SLV"],["Copper","CPER"],["Platinum","PPLT"]].map((r,i,arr)=>{const q=quotes[r[1]];const dp=q&&typeof q.dp==="number"?q.dp:null;return(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<arr.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.dim}}>{r[0]}<span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:5}}>{r[1]}</span></span>
+        <span style={{font:`600 12px ${MONO}`,color:q?C.txt:C.faint}}>{q?fmt(q.c,2):"—"}</span>
+        <span style={{font:`600 10px ${MONO}`,color:dp==null?C.faint:dp>=0?C.teal:C.red,minWidth:52,textAlign:"right"}}>{dp==null?"—":`${dp>=0?"+":""}${fmt(dp,2)}%`}</span></div>);})}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:6}}>Live day moves on metal ETF proxies (GLD/SLV/CPER/PPLT). Gold as haven vs copper as growth — watch the divergence.</div>
     </Panel>
     <Panel title="Agriculture" tag="food complex" accent={C.teal}>
       {AGS.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<AGS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
