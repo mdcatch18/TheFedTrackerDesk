@@ -1123,43 +1123,74 @@ const heatCorr=v=>{if(v>=0){const al=clamp(v,.05,.85);return `rgba(224,96,90,${a
 
 /* ═══════════════  PHASE-2 ENGINES  ═══════════════ */
 function Rates({m}){
-  const rmin=1.2,rmax=4.8;
+  const [d,setD]=useState(null);
+  const [st,setSt]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/rates").then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok){setD(j);setSt("live");}else setSt("error");
+    }).catch(()=>{on&&setSt("error");});
+    return()=>{on=false;};
+  },[]);
+  const curve=d?.curve||[];
+  const sp=d?.spreads||{};
+  const real=d?.real||{};
+  const ymin=curve.length?Math.min(...curve.map(c=>c.y))-0.2:3.4;
+  const ymax=curve.length?Math.max(...curve.map(c=>c.y))+0.2:5.4;
+  const spreadRows=[
+    ["2s10s",sp.s2s10,"bp",sp.s2s10>=0?"dis-inverted":"inverted"],
+    ["3m10s",sp.s3m10,"bp",sp.s3m10>=0?"dis-inverted":"inverted"],
+    ["5s30s",sp.s5s30,"bp",sp.s5s30>=0?"steep":"flat"],
+    ["2s5s10s fly",sp.fly2510,"bp",sp.fly2510>=0?"rich belly":"cheap belly"],
+  ];
+  const realRows=[
+    ["10y real (TIPS)",real.real10!=null?`${fmt(real.real10,2)}%`:"—"],
+    ["5y5y forward BE",real.be5y5y!=null?`${fmt(real.be5y5y,2)}%`:"—"],
+    ["10y breakeven",real.be10y!=null?`${fmt(real.be10y,2)}%`:"—"],
+  ];
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Rates & Curve</span>
+     <Chip label={st==="live"?"● LIVE · FRED":st==="loading"?"○ loading…":"● offline"} tone={st==="live"?C.teal:st==="error"?C.red:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>daily · 1h cache</span>
+   </div>
    <div style={grid2}>
-    <Panel title="US Treasury Curve" tag="FRED · live" accent={C.amber} sub="now vs 1-month ago">
+    <Panel title="US Treasury Curve" tag="FRED · live" accent={C.amber} sub="constant-maturity yields">
       <div style={{height:150,width:"100%"}}><ResponsiveContainer>
-        <LineChart data={RCURVE.map(r=>({t:r[0],now:r[1],prior:r[2]}))} margin={{top:6,right:10,left:-20,bottom:0}}>
-          <XAxis dataKey="t" {...chartAxis}/><YAxis {...chartAxis} domain={[3.4,4.8]} width={38}/>
+        <LineChart data={curve.map(c=>({t:c.t,now:c.y}))} margin={{top:6,right:10,left:-20,bottom:0}}>
+          <XAxis dataKey="t" {...chartAxis}/><YAxis {...chartAxis} domain={[ymin,ymax]} width={38}/>
           <Tooltip content={<TT/>}/>
-          <Line type="monotone" dataKey="prior" stroke={C.faint} strokeWidth={1.2} strokeDasharray="4 3" dot={false}/>
           <Line type="monotone" dataKey="now" stroke={C.amber} strokeWidth={1.9} dot={{r:2,fill:C.amber}}/>
         </LineChart></ResponsiveContainer></div>
-      <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:2}}><span style={{font:`500 10px ${MONO}`,color:C.amber}}>— now</span><span style={{font:`500 10px ${MONO}`,color:C.faint}}>— — 1m ago</span></div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"4px 12px",marginTop:6}}>
+        {curve.map((c,i)=>(<span key={i} style={{font:`500 10px ${MONO}`,color:C.dim}}>{c.t} <span style={{color:C.txt}}>{fmt(c.y,2)}</span></span>))}
+      </div>
     </Panel>
-    <Panel title="Curve Spreads" tag="shape & trades" accent={C.amber}>
-      {RSPREADS.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<RSPREADS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+    <Panel title="Curve Spreads" tag="FRED · live" accent={C.amber} sub="shape & trades">
+      {spreadRows.map((r,i)=>{const val=r[1];const on=r[0].includes("2s10s")||r[0].includes("3m10s");return(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<spreadRows.length-1?`1px solid ${C.lineSoft}`:"none"}}>
         <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-        <span style={{font:`600 13px ${MONO}`,color:r[0].includes("2s10s")||r[0].includes("3m10s")?C.teal:C.txt}}>{r[1]}<span style={{color:C.faint,fontSize:9,marginLeft:2}}>{r[2]}</span></span>
-        <Chip label={r[3]} tone={C.dim}/></div>))}
+        <span style={{font:`600 13px ${MONO}`,color:val==null?C.faint:on?(val>=0?C.teal:C.red):C.txt}}>{val==null?"—":`${val>=0?"+":""}${val}`}<span style={{color:C.faint,fontSize:9,marginLeft:2}}>{r[2]}</span></span>
+        <Chip label={val==null?"—":r[3]} tone={C.dim}/></div>);})}
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Real Yields & Inflation" tag="TIPS · breakevens" accent={C.cyan}>
-      {RREAL.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={RREAL.length}/>)}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Positive real 10y ~1.9% + anchored breakevens = restrictive but not disorderly; the term-premium rebuild is the story to watch.</div>
+    <Panel title="Real Yields & Inflation" tag="FRED · live" accent={C.cyan} sub="TIPS · breakevens">
+      {realRows.map((r,i)=><KV key={i} k={r[0]} v={r[1]} tone={C.txt} i={i} n={realRows.length}/>)}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Real 10y {real.real10!=null?`${fmt(real.real10,2)}%`:"—"} with breakevens anchored near {real.be10y!=null?`${fmt(real.be10y,2)}%`:"—"} — the real-rate level is the restrictive lever on risk assets.</div>
     </Panel>
-    <Panel title="Global Sovereigns" tag="10y · Δ1m bp" accent={C.blue}>
+    <Panel title="Global Sovereigns" tag="manual · 10y levels" accent={C.blue}>
       {GSOV.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"7px 0",borderBottom:i<GSOV.length-1?`1px solid ${C.lineSoft}`:"none"}}>
         <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
         <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{fmt(r[1],2)}%</span>
         <span style={{font:`600 10px ${MONO}`,color:r[2]>=0?C.red:C.teal,minWidth:34,textAlign:"right"}}>{r[2]>=0?"+":""}{r[2]}</span></div>))}
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — no free real-time feed for foreign sovereigns.</div>
     </Panel>
-    <Panel title="Rate Volatility" tag="MOVE index" accent={C.violet}>
+    <Panel title="Rate Volatility" tag="manual · MOVE" accent={C.violet}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"6px 0"}}>
         <Gauge value={clamp((MOVEIDX-50)/1.5,0,100)} color={MOVEIDX>120?C.red:MOVEIDX>90?C.amber:C.teal} cap={`${MOVEIDX}`}/>
         <Chip label={MOVEIDX>120?"stressed":MOVEIDX>90?"elevated":"calm"} tone={MOVEIDX>120?C.red:MOVEIDX>90?C.amber:C.teal}/>
       </div>
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:6}}>MOVE ~98 — rate vol above the calm-regime line; a leading tell for risk assets when it breaks higher.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:6}}>Manual — MOVE index has no free real-time feed.</div>
     </Panel>
    </div>
   </div>);
