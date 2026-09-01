@@ -426,18 +426,40 @@ function Macro({live={}}){
 }
 
 function Earnings(){
+  const [rows,setRows]=useState(null);
+  const [st,setSt]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/earnings").then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok&&Array.isArray(j.rows)&&j.rows.length){setRows(j.rows);setSt("live");}else setSt("empty");
+    }).catch(()=>{on&&setSt("error");});
+    return()=>{on=false;};
+  },[]);
   const raiseRatio=Math.round(GUIDANCE[0][2]/(GUIDANCE[0][2]+GUIDANCE[1][2])*100);
+  const fmtDate=d=>{try{const dt=new Date(d+"T00:00:00");return dt.toLocaleDateString("en-US",{month:"short",day:"numeric"});}catch{return d;}};
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Earnings</span>
+     <Chip label={st==="live"?"● LIVE · Finnhub":st==="loading"?"○ loading…":"● sample"} tone={st==="live"?C.teal:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>upcoming reports · next 3 weeks</span>
+   </div>
    <div style={grid2}>
-    <Panel title="Earnings Calendar" tag="sample · your sleeves" accent={C.blue} sub="next 3 weeks">
-      {EARN_CAL.map((e,i)=>{const tc=e[4]==="up"?C.teal:e[4]==="watch"?C.amber:C.dim;return(
+    <Panel title="Earnings Calendar" tag={st==="live"?"live · Finnhub":"sample"} accent={C.blue} sub="date · symbol · EPS est · timing">
+      {st==="live"?(<div style={{maxHeight:420,overflowY:"auto"}}>
+        {rows.map((e,i)=>{const hc=e.hour==="bmo"?C.amber:e.hour==="amc"?C.violet:C.dim;const hl=e.hour==="bmo"?"pre":e.hour==="amc"?"post":"—";return(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"52px 1fr auto auto",gap:10,alignItems:"center",padding:"8px 0",borderBottom:i<rows.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+          <span style={{font:`600 11px ${MONO}`,color:C.dim}}>{fmtDate(e.date)}</span>
+          <span style={{font:`600 12px ${MONO}`,color:C.txt}}>{e.symbol}</span>
+          <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{e.epsEst!=null?`est ${fmt(e.epsEst,2)}`:"—"}</span>
+          <Chip label={hl} tone={hc}/>
+        </div>);})}
+      </div>):(EARN_CAL.map((e,i)=>{const tc=e[4]==="up"?C.teal:e[4]==="watch"?C.amber:C.dim;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:10,alignItems:"center",padding:"9px 0",borderBottom:i<EARN_CAL.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <span style={{font:`600 11px ${MONO}`,color:C.dim}}>{e[0]}</span>
           <div><div style={{font:`500 12px ${SANS}`,color:C.txt}}>{e[1]}</div><div style={{font:`400 10px ${MONO}`,color:C.faint}}>{e[3]} · <span style={{color:C.violet}}>{e[2]}</span></div></div>
           <span style={{width:7,height:7,borderRadius:"50%",background:tc}}/>
-        </div>);})}
+        </div>);}))}
     </Panel>
-    <Panel title="Aggregate S&P Earnings" tag="blended" accent={C.teal}>
+    <Panel title="Aggregate S&P Earnings" tag="manual · blended" accent={C.teal}>
       <div style={{display:"flex",gap:18,marginBottom:12,flexWrap:"wrap"}}>
         <Stat k="EPS growth y/y" v={`+${fmt(AGG_EPS.growth,1)}`} u="%" tone={C.teal}/>
         <Stat k="Fwd 12m EPS" v={`$${AGG_EPS.fwd}`} sub="rising"/>
@@ -449,11 +471,11 @@ function Earnings(){
           <XAxis dataKey="q" {...chartAxis}/><YAxis {...chartAxis} domain={[11,12.6]} width={38}/>
           <Tooltip content={<TT/>}/><Line type="monotone" dataKey="v" stroke={C.teal} strokeWidth={1.8} dot={{r:2,fill:C.teal}}/>
         </LineChart></ResponsiveContainer></div>
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:4}}>Margin expansion is carrying EPS — the durability question for '27.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:4}}>Manual — no free aggregate-EPS feed. Update from your data provider.</div>
     </Panel>
    </div>
    <div style={grid2}>
-    <Panel title="Guidance Tracker" tag="raise / cut ratio" accent={C.violet}>
+    <Panel title="Guidance Tracker" tag="manual · raise / cut" accent={C.violet}>
       <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:12}}>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}><Gauge value={raiseRatio} color={raiseRatio>55?C.teal:C.amber} cap={`${raiseRatio}%`}/><span style={{font:`400 10px ${SANS}`,color:C.faint}}>raise share</span></div>
         <div style={{flex:1,display:"flex",flexDirection:"column",gap:8}}>
@@ -461,13 +483,15 @@ function Earnings(){
             <span style={{font:`500 11px ${SANS}`,color:C.dim}}>{gd[0]}</span><span style={{font:`600 15px ${MONO}`,color:gd[3]}}>{gd[2]}</span></div>))}
         </div>
       </div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint}}>Manual — no free guidance-tracking feed.</div>
     </Panel>
-    <Panel title="Pre-Announcement Flow" tag="sample · guidance pre-prints" accent={C.blue}>
+    <Panel title="Pre-Announcement Flow" tag="manual · pre-prints" accent={C.blue}>
       {PREANN.map((r,i)=>{const c=r[2]==="positive"?C.teal:C.red;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<PREANN.length-1?`1px solid ${C.lineSoft}`:"none"}}>
           <div><span style={{font:`500 12px ${SANS}`,color:C.txt}}>{r[0]}</span><span style={{color:C.faint,fontFamily:MONO,fontSize:9,marginLeft:6}}>{r[1]}</span><div style={{font:`400 10px ${SANS}`,color:C.faint}}>{r[3]}</div></div>
           <Chip label={r[2]} tone={c}/>
         </div>);})}
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:6}}>Manual — pre-announcement flow is editorial.</div>
     </Panel>
    </div>
   </div>);
