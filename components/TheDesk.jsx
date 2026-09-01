@@ -1722,6 +1722,11 @@ function Cockpit({m,posture,pc,go,quotes={},zdata={}}){
     return()=>{on=false;};
   },[]);
   const H=hist||{};
+  const [news,setNews]=useState(null);
+  useEffect(()=>{let on=true;
+    const load=()=>fetch("/api/news").then(r=>r.json()).then(j=>{if(on&&j&&j.ok&&Array.isArray(j.items))setNews(j.items);}).catch(()=>{});
+    load(); const id=setInterval(load,300000); return()=>{on=false;clearInterval(id);};
+  },[]);
   const qN=Object.keys(quotes).length, zN=Object.keys(zdata).length;
   const netliq=m.fedBS-m.tga-m.rrp, s2s10=(m.y10-m.y2)*100;
   const vixLive=m.vix!=null?m.vix:17.8;
@@ -1763,6 +1768,23 @@ function Cockpit({m,posture,pc,go,quotes={},zdata={}}){
   const liveAnoms=zN?Object.keys(zdata).map(k=>({name:k,z:zdata[k].z,val:zdata[k].value})).sort((a,b)=>Math.abs(b.z)-Math.abs(a.z)):null;
   const anoms=[...ANOM].sort((a,b)=>Math.abs(b[2])-Math.abs(a[2]));
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+    {news&&news.length>0&&(<Panel title="Market Wire" tag={`● LIVE · Finnhub · ${news.length} headlines`} accent={C.red} sub="market news · shocks flagged · 5-min refresh">
+      <div style={{maxHeight:230,overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        {(()=>{
+          const now=Date.now()/1000;
+          const ago=t=>{const s=Math.max(0,now-t);if(s<3600)return `${Math.round(s/60)}m`;if(s<86400)return `${Math.round(s/3600)}h`;return `${Math.round(s/86400)}d`;};
+          // recent-first, but tint shocks; keep last 24h shocks near top
+          const sorted=[...news].sort((a,b)=>b.ts-a.ts);
+          return sorted.map((n,i)=>(
+            <a key={i} href={n.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",display:"grid",gridTemplateColumns:"44px 1fr auto",gap:10,alignItems:"center",padding:"8px 4px",borderBottom:i<sorted.length-1?`1px solid ${C.lineSoft}`:"none",background:n.shock?`${C.red}0c`:"transparent"}}>
+              <span style={{font:`600 10px ${MONO}`,color:C.faint,textAlign:"right"}}>{ago(n.ts)}</span>
+              <span style={{font:`500 12px ${SANS}`,color:C.txt,lineHeight:1.35}}>{n.shock&&<span style={{color:C.red,fontWeight:700,marginRight:5}}>●</span>}{n.headline}</span>
+              <span style={{font:`500 9px ${MONO}`,color:C.dim,whiteSpace:"nowrap"}}>{n.source}</span>
+            </a>));
+        })()}
+      </div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:6}}>Red dot = market-shock language (Fed, oil, war, crash, rate moves). Tap any headline for the source.</div>
+    </Panel>)}
     {qN>0&&(<Panel title="Live Tape" tag={`${qN} live · Finnhub · 5-min`} accent={C.cyan} sub="cross-asset ETF proxies · price + day change">
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(132px,1fr))",gap:8}}>
         {LIVE_TAPE.map((t,i)=>{const q=quotes[t[1]];if(!q)return null;const up=q.dp>=0;return(
