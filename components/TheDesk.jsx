@@ -723,8 +723,6 @@ function Regime({m}){
   const fscored=useMemo(()=>FACTORS.map(r=>{const rateF=(m.funds-3.5)/.5,volF=(m.hyOAS-260)/100;const score=50+r[2]*.4+r[3].growth*g+r[3].infl*inf-r[3].rate*rateF*.5-r[3].vol*volF;return{s:r[0],etf:r[1],score};}).sort((a,b)=>b.score-a.score),[m,g,inf]);
   const fmx=Math.max(...fscored.map(s=>s.score)),fmn=Math.min(...fscored.map(s=>s.score));
   const px=50+g*46,py=50-inf*46;
-  const hiInf=inf>.15, qx=g>=0?100:0, qy=hiInf?0:100;
-  const activeQ=hiInf?(g>=0?"Overheating":"Stagflation"):(g>=0?"Goldilocks":"Recession");
   const trans=(()=>{const dg=(m.gdpnow<1.5?-1:1),di=(m.oil>84||m.corePCE>3.3?1:-1);
     return[["Goldilocks",clamp(30-inf*30+g*20,4,80)],["Overheating",clamp(30+inf*25+g*15,4,85)],["Stagflation",clamp(35+inf*30-g*20,4,88)],["Recession",clamp(30-g*30+(dg<0?12:0),4,82)]];})();
   const ALEN=ANALOGS[0].pts.length;
@@ -733,18 +731,12 @@ function Regime({m}){
     <Panel title="Regime Classifier" tag="growth × inflation" accent={rc}>
       <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:10}}><Chip label={name} tone={rc}/><span style={{font:`400 10px ${MONO}`,color:C.faint}}>g {fmt(g,2)} · infl {fmt(inf,2)}</span></div>
       <svg viewBox="0 0 200 200" style={{width:"100%",height:200}}>
-        <defs>
-          <filter id="rglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <radialGradient id="rgrad" cx="50%" cy="50%" r="70%"><stop offset="0%" stopColor={rc} stopOpacity=".38"/><stop offset="100%" stopColor={rc} stopOpacity=".08"/></radialGradient>
-        </defs>
-        <rect x="0" y="0" width="100" height="100" fill={C.amber} opacity=".04"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".04"/>
-        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".04"/><rect x="100" y="100" width="100" height="100" fill={C.teal} opacity=".04"/>
-        <rect x={qx} y={qy} width="100" height="100" fill="url(#rgrad)"/>
-        <rect x={qx+2} y={qy+2} width="96" height="96" rx="3" fill="none" stroke={rc} strokeWidth="1.8" opacity=".95" filter="url(#rglow)"/>
+        <rect x="0" y="0" width="100" height="100" fill={C.teal} opacity=".05"/><rect x="100" y="0" width="100" height="100" fill={C.violet} opacity=".05"/>
+        <rect x="0" y="100" width="100" height="100" fill={C.red} opacity=".05"/><rect x="100" y="100" width="100" height="100" fill={C.amber} opacity=".05"/>
         <line x1="100" y1="6" x2="100" y2="194" stroke={C.line}/><line x1="6" y1="100" x2="194" y2="100" stroke={C.line}/>
-        {[["Overheating",150,26],["Goldilocks",150,178],["Stagflation",50,26],["Recession",50,178]].map((q,i)=>{const on=q[0]===activeQ;return <text key={i} x={q[1]} y={q[2]} fill={on?rc:C.faint} fontSize={on?"8.5":"7.5"} fontWeight={on?"700":"400"} fontFamily={MONO} textAnchor="middle" filter={on?"url(#rglow)":undefined}>{q[0]}</text>;})}
+        {[["Goldilocks",150,26],["Overheating",150,178],["Recession",50,26],["Stagflation",50,178]].map((q,i)=><text key={i} x={q[1]} y={q[2]} fill={C.faint} fontSize="7.5" fontFamily={MONO} textAnchor="middle">{q[0]}</text>)}
         <text x="196" y="97" fill={C.dim} fontSize="7" fontFamily={MONO} textAnchor="end">growth →</text><text x="103" y="12" fill={C.dim} fontSize="7" fontFamily={MONO}>↑ inflation</text>
-        <circle cx={px*2} cy={py*2} r="11" fill={rc} opacity=".2"/><circle cx={px*2} cy={py*2} r="4.6" fill={rc} filter="url(#rglow)"/><circle cx={px*2} cy={py*2} r="1.8" fill="#fff" opacity=".92"/>
+        <circle cx={px*2} cy={py*2} r="7" fill={rc} opacity=".25"/><circle cx={px*2} cy={py*2} r="3.4" fill={rc}/>
       </svg>
     </Panel>
     <Panel title="Regime Transition Odds" tag="next-quarter" accent={C.violet} sub="heuristic">
@@ -894,25 +886,69 @@ function Geo(){
 }
 
 function Predict(){
-  const tone=g=>g==="Fed Path"?C.amber:g==="Market & Crash"?C.red:C.violet;
+  const [data,setData]=useState(null);
+  const [status,setStatus]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/kalshi").then(r=>r.json()).then(d=>{if(!on)return;
+      if(d&&Array.isArray(d.groups)){setData(d);setStatus("live");}else setStatus("error");
+    }).catch(()=>{on&&setStatus("error");});
+    return()=>{on=false;};
+  },[]);
+  const tone=k=>k==="fed"?C.amber:k==="growth"?C.red:C.violet;
+
+  const Ladder=({item,t})=>{
+    const act=item.buckets.filter(b=>b.prob>0);
+    const tot=act.reduce((s,b)=>s+b.prob,0)||1;
+    return(<div style={{padding:"7px 0",borderBottom:`1px solid ${C.lineSoft}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{item.label}</span>
+        <span style={{font:`400 9px ${MONO}`,color:C.faint}}>{item.meetingDate} · modal {item.modal.range}</span>
+      </div>
+      <div style={{display:"flex",height:20,borderRadius:4,overflow:"hidden",gap:1,background:C.bg2}}>
+        {act.map((b,i)=>{const mod=b.range===item.modal.range;return(
+          <div key={i} title={`${b.range} · ${b.prob}%`} style={{flex:`${b.prob/tot} 1 0`,background:t,opacity:mod?.92:.38,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {b.prob>=13&&<span style={{font:`600 9px ${MONO}`,color:C.bg0}}>{b.prob}</span>}
+          </div>);})}
+      </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:6}}>
+        {act.map((b,i)=>{const mod=b.range===item.modal.range;return(
+          <span key={i} style={{font:`500 9px ${MONO}`,color:mod?t:C.faint}}>{b.range} · {b.prob}%</span>);})}
+      </div>
+    </div>);
+  };
+
+  const ListItem=({item,t,last})=>(
+    <div style={{padding:"7px 0",borderBottom:last?"none":`1px solid ${C.lineSoft}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{item.label}</span>
+        {item.meetingDate&&<span style={{font:`400 9px ${MONO}`,color:C.faint}}>{item.meetingDate}</span>}
+      </div>
+      {item.contracts.map((c,i)=>(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 40px",gap:8,alignItems:"center",padding:"3px 0"}}>
+          <div>
+            <div style={{font:`500 10px ${SANS}`,color:C.dim,marginBottom:3}}>{c.name}</div>
+            <div style={{height:5,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${c.prob}%`,background:t,opacity:.82,borderRadius:3}}/></div>
+          </div>
+          <span style={{font:`600 13px ${MONO}`,color:t,textAlign:"right"}}>{c.prob}<span style={{fontSize:8,color:C.faint}}>%</span></span>
+        </div>))}
+    </div>
+  );
+
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
-   <div style={grid2}>
-    {Object.entries(PREDICT).map(([grp,rows])=>(
-      <Panel key={grp} title={grp} tag="sample · live via API" accent={tone(grp)} sub="implied probability">
-        {rows.map((r,i)=><ProbBar key={i} q={r[0]} prob={r[1]} chg={r[2]} src={r[3]} tone={tone(grp)}/>)}
-      </Panel>))}
-   </div>
-   <div style={grid2}>
-    <Panel title="Multi-Venue Arbitrage" tag="Kalshi vs Poly vs CME" accent={C.cyan} sub="cross-venue spread">
-      {VENUE.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto 40px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<VENUE.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-        <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[1]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[2]}</span>
-        <span style={{font:`500 10px ${MONO}`,color:C.dim}}>{r[3]}</span>
-        <Chip label={r[4]} tone={r[4].startsWith("3")?C.amber:C.teal}/>
-      </div>))}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Wider cross-venue spreads = disagreement / potential edge; tight spreads = consensus-priced.</div>
-    </Panel>
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+      <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Prediction Markets</span>
+      <Chip label={status==="live"?"● LIVE · Kalshi":status==="loading"?"○ loading…":"● offline"} tone={status==="live"?C.teal:status==="error"?C.red:C.dim}/>
+      <span style={{font:`400 10px ${MONO}`,color:C.faint}}>implied probability · no-auth read API · 5-min cache</span>
+    </div>
+    {status!=="live"&&<Panel title="Prediction Markets" tag="Kalshi" accent={C.violet}><div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"6px 0"}}>{status==="loading"?"Loading live Kalshi odds…":"Couldn't reach /api/kalshi — check the route is deployed."}</div></Panel>}
+    {data&&(<div style={grid2}>
+      {data.groups.filter(g=>g.items&&g.items.length).map(g=>{const t=tone(g.key);return(
+        <Panel key={g.key} title={g.label} tag="live · Kalshi" accent={t} sub="implied probability">
+          {g.items.map((item,i)=>item.kind==="ladder"
+            ?<Ladder key={i} item={item} t={t}/>
+            :<ListItem key={i} item={item} t={t} last={i===g.items.length-1}/>)}
+        </Panel>);})}
+    </div>)}
     <Panel title="Calibration Track Record" tag="accuracy by class" accent={C.blue} sub="Brier · hit-rate">
       {CALIB.map((r,i)=>{const c=r[2]>85?C.teal:r[2]>72?C.amber:C.red;return(
         <div key={i} style={{display:"grid",gridTemplateColumns:"120px 54px 1fr 34px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<CALIB.length-1?`1px solid ${C.lineSoft}`:"none"}}>
@@ -923,7 +959,6 @@ function Predict(){
         </div>);})}
       <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Fed-path markets are best-calibrated; geopolitical binaries the least — weight them accordingly.</div>
     </Panel>
-   </div>
   </div>);
 }
 
@@ -972,6 +1007,13 @@ export default function TheDesk(){
   const [eia,setEia]=useState({});
   useEffect(()=>{let on=true;
     fetch("/api/eia").then(r=>r.json()).then(d=>{if(on&&d&&d.series)setEia(d.series);}).catch(()=>{});
+    return()=>{on=false;};
+  },[]);
+  const [ismH,setIsmH]=useState(null);
+  useEffect(()=>{let on=true;
+    fetch("/api/ism").then(r=>r.json()).then(d=>{if(on&&d&&d.ok&&typeof d.ism==="number"){
+      setM(p=>({...p,ism:d.ism})); setIsmH(d.history||null);
+    }}).catch(()=>{});
     return()=>{on=false;};
   },[]);
   const net=m.fedBS-m.tga-m.rrp, chg13=net-(LIQ_SERIES[LIQ_SERIES.length-14]?.net??net);
