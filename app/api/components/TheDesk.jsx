@@ -1008,6 +1008,7 @@ export default function TheDesk(){
   useEffect(()=>{let on=true;
     fetch("/api/eia").then(r=>r.json()).then(d=>{if(on&&d&&d.series)setEia(d.series);}).catch(()=>{});
     return()=>{on=false;};
+  },[]);
   const [ismH,setIsmH]=useState(null);
   useEffect(()=>{let on=true;
     fetch("/api/ism").then(r=>r.json()).then(d=>{if(on&&d&&d.ok&&typeof d.ism==="number"){
