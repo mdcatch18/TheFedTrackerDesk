@@ -386,6 +386,11 @@ function FedDots({m}){
 }
 
 function Macro({live={}}){
+  const [rec,setRec]=useState(null);
+  useEffect(()=>{let on=true;
+    fetch("/api/recession").then(r=>r.json()).then(j=>{if(on&&j&&j.ok&&Array.isArray(j.rows))setRec(j.rows);}).catch(()=>{});
+    return()=>{on=false;};
+  },[]);
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
    <div style={{display:"flex",alignItems:"center",gap:14,font:`500 10px ${SANS}`,color:C.faint,padding:"0 2px"}}>
      <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:7,height:7,borderRadius:"50%",background:C.cyan}}/>live · FRED</span>
@@ -406,13 +411,27 @@ function Macro({live={}}){
       </Panel>))}
    </div>
    <div style={grid2}>
-    <Panel title="Recession Probability" tag="model dashboard" accent={C.red} sub="12-month, %">
-      {RECESS.map((r,i)=>{const c=r[1]>40?C.red:r[1]>25?C.amber:C.teal;return(
-        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 90px 34px",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<RECESS.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-          <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r[0]}</span>
-          <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${r[1]}%`,background:c,opacity:.8,borderRadius:3}}/></div>
-          <span style={{font:`600 11px ${MONO}`,color:c,textAlign:"right"}}>{r[1]}</span>
-        </div>);})}
+    <Panel title="Recession Probability" tag={rec?"FRED · live + manual":"model dashboard"} accent={C.red} sub="12-month">
+      {(()=>{
+        const recMap={}; (rec||[]).forEach(x=>{recMap[x.label]=x.v;});
+        const nyLive=recMap["NY Fed (curve, 12m)"];
+        const sahmLive=recMap["Sahm Rule"];
+        const disp=[
+          {name:"NY Fed (curve, 12m)",val:nyLive!=null?nyLive:38,pct:nyLive!=null?nyLive:38,live:nyLive!=null,unit:"%"},
+          {name:"Sahm Rule",val:sahmLive!=null?sahmLive:0.43,pct:sahmLive!=null?clamp(sahmLive/0.5*50,0,100):43,live:sahmLive!=null,unit:""},
+          {name:"Yield-curve (3m10y)",val:22,pct:22,live:false,unit:"%"},
+          {name:"Conf Board LEI 6m diffusion",val:45,pct:45,live:false,unit:"%"},
+          {name:"Credit-spread model",val:19,pct:19,live:false,unit:"%"},
+        ];
+        return disp.map((r,i)=>{const c=r.pct>40?C.red:r.pct>25?C.amber:C.teal;return(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 90px 52px 8px",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<disp.length-1?`1px solid ${C.lineSoft}`:"none"}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.name}</span>
+            <div style={{height:6,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${clamp(r.pct,0,100)}%`,background:c,opacity:.8,borderRadius:3}}/></div>
+            <span style={{font:`600 11px ${MONO}`,color:c,textAlign:"right"}}>{r.unit==="%"?fmt(r.val,1):fmt(r.val,2)}{r.unit}</span>
+            <span style={{width:6,height:6,borderRadius:"50%",background:r.live?C.cyan:C.faint}} title={r.live?"live":"manual"}/>
+          </div>);});
+      })()}
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Cyan dot = live FRED (NY Fed prob, Sahm). Others manual — no clean free feed. Sahm below 0.50 = no trigger.</div>
     </Panel>
     <Panel title="Growth Nowcast & Surprise" tag="live trackers" accent={C.cyan}>
       {NOWCAST.map((r,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",padding:"9px 0",borderBottom:i<NOWCAST.length-1?`1px solid ${C.lineSoft}`:"none"}}>
