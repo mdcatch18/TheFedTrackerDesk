@@ -1,6 +1,5 @@
 // Finnhub live quotes (free tier: US ETFs/stocks). Key stays server-side.
 export const revalidate = 300; // 5 min cache — well under 60 calls/min free limit
-
 const SYMS = [
   // cross-asset tape
   "SPY","QQQ","IWM","DIA","VIXY","TLT","HYG","LQD","GLD","SLV","USO","DBC","UUP","BITO","ETHA","EFA",
@@ -8,8 +7,11 @@ const SYMS = [
   "XLK","XLF","XLV","XLY","XLP","XLE","XLI","XLB","XLU","XLRE","XLC",
   // thematics
   "SMH","AIQ","CIBR","IGV","BLOK","URA","TAN","GRID","GDX","XOP","COPX","ITA","IBIT","KRE","VNQ","MCHI","KWEB","VGK","EMXC","MTUM","USMV",
+  // foreign markets (Global Risk desk)
+  "EWJ","FXI","EWG","EWU","EWQ","EWC","EWA","EWZ","EWY","INDA","EWH","EWT",
+  // metals proxies (Commodities desk, later)
+  "CPER","PPLT",
 ];
-
 export async function GET() {
   const key = process.env.FINNHUB_API_KEY;
   if (!key) {
