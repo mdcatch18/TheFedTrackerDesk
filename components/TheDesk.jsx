@@ -1400,23 +1400,44 @@ function FXDesk(){
 }
 
 function Volatility(){
-  const tmax=Math.max(...VTERM.map(v=>v[1])),tmin=Math.min(...VTERM.map(v=>v[1]));
+  const [rows,setRows]=useState(null);
+  const [st,setSt]=useState("loading");
+  useEffect(()=>{let on=true;
+    fetch("/api/vol").then(r=>r.json()).then(j=>{if(!on)return;
+      if(j&&j.ok&&Array.isArray(j.rows)&&j.rows.length){setRows(j.rows);setSt("live");}else setSt("error");
+    }).catch(()=>{on&&setSt("error");});
+    return()=>{on=false;};
+  },[]);
+  const live=rows||[];
+  const vmax=live.length?Math.max(...live.map(r=>r.v)):50;
   return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+   <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 2px"}}>
+     <span style={{font:`600 12px ${SANS}`,color:C.txt}}>Volatility</span>
+     <Chip label={st==="live"?"● LIVE · FRED":st==="loading"?"○ loading…":"● offline"} tone={st==="live"?C.teal:st==="error"?C.red:C.dim}/>
+     <span style={{font:`400 10px ${MONO}`,color:C.faint}}>spot vol indices · daily</span>
+   </div>
    <div style={grid2}>
-    <Panel title="Equity Vol Term Structure" tag="VIX complex" accent={C.violet} sub="contango = calm">
+    <Panel title="Cross-Asset Volatility" tag="FRED · live" accent={C.blue} sub="equity · oil · gold — spot levels">
+      {live.length?(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {live.map((r,i)=>{const w=clamp(r.v/vmax*100,4,100);const c=r.v>30?C.red:r.v>20?C.amber:C.teal;return(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"120px 1fr 48px",alignItems:"center",gap:8}}>
+            <span style={{font:`500 11px ${SANS}`,color:C.txt}}>{r.label}</span>
+            <div style={{height:7,background:C.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${w}%`,background:c,opacity:.8,borderRadius:3}}/></div>
+            <span style={{font:`600 12px ${MONO}`,color:c,textAlign:"right"}}>{fmt(r.v,1)}</span>
+          </div>);})}
+      </div>):<div style={{font:`400 11px ${SANS}`,color:C.faint,padding:"8px 0"}}>{st==="loading"?"Loading live vol…":"Couldn't reach /api/vol."}</div>}
+      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Live spot vol across assets. Watch OVX (oil) vs VIX (equity) — a wide oil-over-equity gap flags a geopolitical/supply premium, not broad risk-off.</div>
+    </Panel>
+    <Panel title="Equity Vol Term Structure" tag="manual · VIX complex" accent={C.violet} sub="contango = calm">
       <div style={{height:140,width:"100%"}}><ResponsiveContainer>
         <LineChart data={VTERM.map(v=>({t:v[0],v:v[1]}))} margin={{top:6,right:10,left:-22,bottom:0}}>
           <XAxis dataKey="t" {...chartAxis}/><YAxis {...chartAxis} domain={[14,24]} width={36}/>
           <Tooltip content={<TT/>}/><Line type="monotone" dataKey="v" stroke={C.violet} strokeWidth={1.9} dot={{r:2.5,fill:C.violet}}/>
         </LineChart></ResponsiveContainer></div>
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:4}}>Upward-sloping (contango) — no near-term panic priced; a flip to backwardation is the stress tell.</div>
-    </Panel>
-    <Panel title="Cross-Asset Vol" tag="equity · rates · FX · commod" accent={C.blue}>
-      {XVOL.map((r,i)=><KV key={i} k={r[0]} v={r[1]} arrow={r[2]} tone={C.txt} i={i} n={XVOL.length}/>)}
-      <div style={{font:`400 10px ${SANS}`,color:C.faint,marginTop:8}}>Oil vol (OVX) the outlier bid — geopolitical premium bleeding into the vol surface.</div>
+      <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:4}}>Manual — VIX term structure (9D/3M/6M/1Y) needs a vol-surface feed. Spot VIX is live at left.</div>
     </Panel>
    </div>
-   <Panel title="Skew, Premium & Dealer Positioning" tag="the tails" accent={C.red}>
+   <Panel title="Skew, Premium & Dealer Positioning" tag="manual · the tails" accent={C.red}>
      <div style={grid2}>
        {VSKEW.map((r,i)=>(<div key={i} style={{background:C.bg2,border:`1px solid ${C.lineSoft}`,borderRadius:5,padding:"9px 11px"}}>
          <div style={{font:`500 10px ${SANS}`,color:C.dim}}>{r[0]}</div>
@@ -1426,6 +1447,7 @@ function Volatility(){
          </div>
        </div>))}
      </div>
+     <div style={{font:`400 9px ${SANS}`,color:C.faint,marginTop:8}}>Manual — SKEW, put/call and dealer gamma have no free real-time feed.</div>
    </Panel>
   </div>);
 }
